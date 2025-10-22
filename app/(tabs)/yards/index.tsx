@@ -66,10 +66,10 @@ export default function YardsScreen() {
   };
 
   const renderMapView = () => {
-    if (Platform.OS === "web") {
-      const centerLat = yardsWithLocation.reduce((sum, y) => sum + (y.latitude || 0), 0) / yardsWithLocation.length;
-      const centerLng = yardsWithLocation.reduce((sum, y) => sum + (y.longitude || 0), 0) / yardsWithLocation.length;
+    const centerLat = yardsWithLocation.reduce((sum, y) => sum + (y.latitude || 0), 0) / yardsWithLocation.length;
+    const centerLng = yardsWithLocation.reduce((sum, y) => sum + (y.longitude || 0), 0) / yardsWithLocation.length;
 
+    if (Platform.OS === "web") {
       return (
         <View style={styles.webMapContainer}>
           <iframe
@@ -92,39 +92,7 @@ export default function YardsScreen() {
       );
     }
 
-    const maps = require("react-native-maps");
-    const MapView = maps.default;
-    const Marker = maps.Marker;
-    const PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE;
-
-    const centerLat = yardsWithLocation.reduce((sum, y) => sum + (y.latitude || 0), 0) / yardsWithLocation.length;
-    const centerLng = yardsWithLocation.reduce((sum, y) => sum + (y.longitude || 0), 0) / yardsWithLocation.length;
-
-    return (
-      <MapView
-        style={styles.map}
-        provider={PROVIDER_GOOGLE}
-        initialRegion={{
-          latitude: centerLat,
-          longitude: centerLng,
-          latitudeDelta: 0.1,
-          longitudeDelta: 0.1,
-        }}
-      >
-        {yardsWithLocation.map((yard) => (
-          <Marker
-            key={yard.id}
-            coordinate={{
-              latitude: yard.latitude!,
-              longitude: yard.longitude!,
-            }}
-            title={yard.name}
-            description={yard.address || `${getHiveCount(yard.id)} hives`}
-            onCalloutPress={() => router.push(`/(tabs)/yards/${yard.id}` as any)}
-          />
-        ))}
-      </MapView>
-    );
+    return null;
   };
 
   return (

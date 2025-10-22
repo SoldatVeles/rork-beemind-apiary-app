@@ -146,38 +146,7 @@ export default function YardDetailScreen() {
       );
     }
 
-    const maps = require("react-native-maps");
-    const MapView = maps.default;
-    const Marker = maps.Marker;
-    const PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE;
-
-    return (
-      <View style={styles.mapContainer}>
-        <MapView
-          style={styles.map}
-          provider={PROVIDER_GOOGLE}
-          initialRegion={{
-            latitude: yard.latitude ?? 0,
-            longitude: yard.longitude ?? 0,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          }}
-        >
-          <Marker
-            coordinate={{
-              latitude: yard.latitude ?? 0,
-              longitude: yard.longitude ?? 0,
-            }}
-            title={yard.name}
-            description={yard.address}
-          />
-        </MapView>
-        <TouchableOpacity style={styles.mapOverlayButton} onPress={openInMaps}>
-          <Navigation size={16} color="#FFFFFF" />
-          <Text style={styles.mapOverlayButtonText}>Open in Maps</Text>
-        </TouchableOpacity>
-      </View>
-    );
+    return null;
   };
 
   return (
