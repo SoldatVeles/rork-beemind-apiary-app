@@ -66,33 +66,29 @@ export default function YardsScreen() {
   };
 
   const renderMapView = () => {
-    const centerLat = yardsWithLocation.reduce((sum, y) => sum + (y.latitude || 0), 0) / yardsWithLocation.length;
-    const centerLng = yardsWithLocation.reduce((sum, y) => sum + (y.longitude || 0), 0) / yardsWithLocation.length;
-
-    if (Platform.OS === "web") {
-      return (
-        <View style={styles.webMapContainer}>
-          <iframe
-            width="100%"
-            height="100%"
-            style={{ border: 0, borderRadius: 12 }}
-            src={`https://www.google.com/maps/embed/v1/view?key=AIzaSyC3RmPJI5SBF_CqWtGnKrNSFJMJL1KQGjM&center=${centerLat},${centerLng}&zoom=12&maptype=roadmap`}
-            allowFullScreen
-          />
+    return (
+      <View style={styles.webMapContainer}>
+        <Text style={styles.mapPlaceholder}>📍 Map View</Text>
+        <Text style={styles.mapSubtext}>
+          Tap any yard below to open in your device's map app
+        </Text>
+        <View style={styles.yardsListInMap}>
           {yardsWithLocation.map((yard) => (
             <TouchableOpacity
               key={yard.id}
-              style={styles.webMarkerLink}
+              style={styles.yardInMapButton}
               onPress={() => openInMaps(yard.latitude!, yard.longitude!, yard.name)}
             >
-              <Text style={styles.webMarkerText}>{yard.name}</Text>
+              <MapPin size={16} color={Colors.light.primary} />
+              <Text style={styles.yardInMapText}>{yard.name}</Text>
+              <Text style={styles.yardInMapCoords}>
+                {yard.latitude?.toFixed(4)}, {yard.longitude?.toFixed(4)}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
-      );
-    }
-
-    return null;
+      </View>
+    );
   };
 
   return (
@@ -415,19 +411,41 @@ const styles = StyleSheet.create({
   },
   webMapContainer: {
     flex: 1,
-    position: "relative",
+    padding: 20,
+    alignItems: "center",
+    backgroundColor: Colors.light.card,
   },
-  webMarkerLink: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    backgroundColor: Colors.light.primary,
-    padding: 12,
-    borderRadius: 8,
+  mapPlaceholder: {
+    fontSize: 32,
+    marginBottom: 12,
   },
-  webMarkerText: {
-    color: "#FFFFFF",
+  mapSubtext: {
+    fontSize: 14,
+    color: Colors.light.tabIconDefault,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  yardsListInMap: {
+    width: "100%",
+  },
+  yardInMapButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.light.background,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    gap: 8,
+  },
+  yardInMapText: {
+    fontSize: 16,
     fontWeight: "600" as const,
+    color: Colors.light.text,
+    flex: 1,
+  },
+  yardInMapCoords: {
+    fontSize: 12,
+    color: Colors.light.tabIconDefault,
   },
   modalOverlay: {
     flex: 1,

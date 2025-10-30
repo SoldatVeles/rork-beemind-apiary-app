@@ -128,25 +128,21 @@ export default function YardDetailScreen() {
   const renderMap = () => {
     if (!hasLocation) return null;
 
-    if (Platform.OS === "web") {
-      return (
-        <View style={styles.mapContainer}>
-          <iframe
-            width="100%"
-            height="100%"
-            style={{ border: 0, borderRadius: 12 }}
-            src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyC3RmPJI5SBF_CqWtGnKrNSFJMJL1KQGjM&q=${yard.latitude},${yard.longitude}&zoom=15`}
-            allowFullScreen
-          />
-          <TouchableOpacity style={styles.mapOverlayButton} onPress={openInMaps}>
+    return (
+      <TouchableOpacity style={styles.mapContainer} onPress={openInMaps}>
+        <View style={styles.mapPlaceholderContainer}>
+          <MapPin size={48} color={Colors.light.primary} />
+          <Text style={styles.mapPlaceholderTitle}>Location Available</Text>
+          <Text style={styles.mapPlaceholderCoords}>
+            {yard.latitude?.toFixed(4)}, {yard.longitude?.toFixed(4)}
+          </Text>
+          <View style={styles.mapOpenButton}>
             <Navigation size={16} color="#FFFFFF" />
-            <Text style={styles.mapOverlayButtonText}>Open in Maps</Text>
-          </TouchableOpacity>
+            <Text style={styles.mapOpenButtonText}>Open in Maps</Text>
+          </View>
         </View>
-      );
-    }
-
-    return null;
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -437,11 +433,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   mapContainer: {
-    height: 250,
+    height: 200,
     borderRadius: 12,
     overflow: "hidden",
     marginBottom: 16,
-    position: "relative",
+    backgroundColor: Colors.light.card,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -454,34 +450,34 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  map: {
-    width: "100%",
-    height: "100%",
+  mapPlaceholderContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
   },
-  mapOverlayButton: {
-    position: "absolute",
-    top: 12,
-    right: 12,
+  mapPlaceholderTitle: {
+    fontSize: 18,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
+    marginTop: 12,
+  },
+  mapPlaceholderCoords: {
+    fontSize: 14,
+    color: Colors.light.tabIconDefault,
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  mapOpenButton: {
     backgroundColor: Colors.light.primary,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
   },
-  mapOverlayButtonText: {
+  mapOpenButtonText: {
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "600" as const,
