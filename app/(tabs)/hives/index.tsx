@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, TextInput, Modal, Alert } from "react-native";
-import { Hexagon, Plus, Search, X } from "lucide-react-native";
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, TextInput, Modal, Alert, Linking } from "react-native";
+import { Hexagon, Plus, Search, X, Map as MapIcon } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import { useBeeMindStore } from "@/store/beemind-store";
@@ -25,6 +25,13 @@ export default function HivesScreen() {
     return matchesSearch && matchesStatus;
   });
 
+  const hivesWithLocation = hives.filter((hive) => {
+    const yard = yards.find((y) => y.id === hive.yard_id);
+    return yard && yard.latitude && yard.longitude;
+  });
+  const hasHivesWithLocation = hivesWithLocation.length > 0;
+  const [mapModalVisible, setMapModalVisible] = useState<boolean>(false);
+
   const getYardName = (yardId: string) => {
     return yards.find((y) => y.id === yardId)?.name || "Unknown Yard";
   };
@@ -40,6 +47,24 @@ export default function HivesScreen() {
       default:
         return Colors.light.tabIconDefault;
     }
+  };
+
+  const openHiveInMaps = (hive: typeof hives[0]) => {
+    const yard = yards.find((y) => y.id === hive.yard_id);
+    if (!yard || !yard.latitude || !yard.longitude) return;
+
+    const scheme = Platform.select({
+      ios: "maps:0,0?q=",
+      android: "geo:0,0?q=",
+      default: "https://www.google.com/maps/search/?api=1&query=",
+    });
+    const latLng = `${yard.latitude},${yard.longitude}`;
+    const url = Platform.select({
+      ios: `${scheme}${hive.label}@${latLng}`,
+      android: `${scheme}${latLng}(${hive.label})`,
+      default: `${scheme}${latLng}`,
+    });
+    Linking.openURL(url);
   };
 
   const handleSubmit = () => {
@@ -67,6 +92,21 @@ export default function HivesScreen() {
 
   return (
     <View style={styles.container}>
+      {hasHivesWithLocation && (
+        <TouchableOpacity
+          style={styles.mapPreviewCard}
+          onPress={() => setMapModalVisible(true)}
+        >
+          <View style={styles.mapPreviewHeader}>
+            <MapIcon size={20} color="#FFFFFF" />
+            <Text style={styles.mapPreviewTitle}>View All Hives on Map</Text>
+          </View>
+          <Text style={styles.mapPreviewSubtitle}>
+            {hivesWithLocation.length} {hivesWithLocation.length === 1 ? "hive" : "hives"} with location
+          </Text>
+        </TouchableOpacity>
+      )}
+
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <Search size={20} color={Colors.light.tabIconDefault} />
@@ -146,6 +186,62 @@ export default function HivesScreen() {
       <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
         <Plus size={24} color="#FFFFFF" />
       </TouchableOpacity>
+
+      <Modal
+        visible={mapModalVisible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setMapModalVisible(false)}
+      >
+        <View style={styles.mapModal}>
+          <View style={styles.mapModalHeader}>
+            <Text style={styles.mapModalTitle}>All Hives</Text>
+            <TouchableOpacity onPress={() => setMapModalVisible(false)}>
+              <X size={24} color={Colors.light.text} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.webMapContainer}>
+            <Text style={styles.mapPlaceholder}>🗺️ Hive Locations</Text>
+            <Text style={styles.mapSubtext}>
+              Tap any hive below to open its location in your device&apos;s map app
+            </Text>
+            <ScrollView style={styles.hivesListInMap}>
+              {hivesWithLocation.map((hive) => {
+                const yard = yards.find((y) => y.id === hive.yard_id);
+                if (!yard) return null;
+                return (
+                  <TouchableOpacity
+                    key={hive.id}
+                    style={styles.hiveInMapButton}
+                    onPress={() => openHiveInMaps(hive)}
+                  >
+                    <View style={styles.hiveInMapIcon}>
+                      <Hexagon size={20} color={Colors.light.primary} />
+                    </View>
+                    <View style={styles.hiveInMapContent}>
+                      <Text style={styles.hiveInMapText}>{hive.label}</Text>
+                      <Text style={styles.hiveInMapYard}>{yard.name}</Text>
+                      <Text style={styles.hiveInMapCoords}>
+                        📍 {yard.latitude?.toFixed(4)}, {yard.longitude?.toFixed(4)}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.mapStatusBadge,
+                        { backgroundColor: getStatusColor(hive.status) + "20" },
+                      ]}
+                    >
+                      <Text style={[styles.mapStatusText, { color: getStatusColor(hive.status) }]}>
+                        {hive.status}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={modalVisible}
@@ -477,6 +573,133 @@ const styles = StyleSheet.create({
   buttonSecondaryText: {
     color: Colors.light.text,
     fontSize: 16,
+    fontWeight: "600" as const,
+  },
+  mapPreviewCard: {
+    backgroundColor: Colors.light.primary,
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  mapPreviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  mapPreviewTitle: {
+    fontSize: 16,
+    fontWeight: "600" as const,
+    color: "#FFFFFF",
+  },
+  mapPreviewSubtitle: {
+    fontSize: 14,
+    color: "#FFFFFF",
+    opacity: 0.9,
+  },
+  mapModal: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
+  mapModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    paddingTop: Platform.select({ ios: 60, default: 16 }),
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
+    backgroundColor: Colors.light.card,
+  },
+  mapModalTitle: {
+    fontSize: 20,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
+  },
+  webMapContainer: {
+    flex: 1,
+    padding: 20,
+    alignItems: "center",
+    backgroundColor: Colors.light.background,
+  },
+  mapPlaceholder: {
+    fontSize: 32,
+    marginBottom: 12,
+  },
+  mapSubtext: {
+    fontSize: 14,
+    color: Colors.light.tabIconDefault,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  hivesListInMap: {
+    width: "100%",
+  },
+  hiveInMapButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.light.card,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    gap: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  hiveInMapIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.light.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  hiveInMapContent: {
+    flex: 1,
+  },
+  hiveInMapText: {
+    fontSize: 16,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
+    marginBottom: 4,
+  },
+  hiveInMapYard: {
+    fontSize: 14,
+    color: Colors.light.tabIconDefault,
+    marginBottom: 2,
+  },
+  hiveInMapCoords: {
+    fontSize: 12,
+    color: Colors.light.tabIconDefault,
+  },
+  mapStatusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  mapStatusText: {
+    fontSize: 12,
     fontWeight: "600" as const,
   },
 });
