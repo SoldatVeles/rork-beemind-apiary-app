@@ -5,7 +5,7 @@ import { Hexagon, Edit, Trash2, Plus, Calendar, Crown, CheckSquare, X, Pill, Map
 import Colors from "@/constants/colors";
 import { useBeeMindStore } from "@/store/beemind-store";
 import type { QueenStatus } from "@/types";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+
 
 type TabType = "overview" | "inspections" | "queen" | "tasks" | "treatments";
 
@@ -99,33 +99,55 @@ export default function HiveDetailScreen() {
     Linking.openURL(url);
   };
 
-  const renderOverview = () => (
+  const renderOverview = () => {
+    let MapView: any = null;
+    let Marker: any = null;
+    let PROVIDER_GOOGLE: any = null;
+
+    if (Platform.OS !== 'web') {
+      const maps = require('react-native-maps');
+      MapView = maps.default;
+      Marker = maps.Marker;
+      PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE;
+    }
+
+    return (
     <View>
       {yard && yard.latitude && yard.longitude && (
         <View style={styles.mapContainer}>
-          <MapView
-            style={styles.map}
-            provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
-            initialRegion={{
-              latitude: yard.latitude,
-              longitude: yard.longitude,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}
-            scrollEnabled={false}
-            zoomEnabled={false}
-            rotateEnabled={false}
-            pitchEnabled={false}
-          >
-            <Marker
-              coordinate={{
+          {Platform.OS !== 'web' && MapView ? (
+            <MapView
+              style={styles.map}
+              provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+              initialRegion={{
                 latitude: yard.latitude,
                 longitude: yard.longitude,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
               }}
-              title={hive.label}
-              description={yard.name}
-            />
-          </MapView>
+              scrollEnabled={false}
+              zoomEnabled={false}
+              rotateEnabled={false}
+              pitchEnabled={false}
+            >
+              <Marker
+                coordinate={{
+                  latitude: yard.latitude,
+                  longitude: yard.longitude,
+                }}
+                title={hive.label}
+                description={yard.name}
+              />
+            </MapView>
+          ) : (
+            <View style={[styles.map, styles.webMapFallback]}>
+              <MapPin size={48} color={Colors.light.primary} />
+              <Text style={styles.webMapText}>{yard.name}</Text>
+              <Text style={styles.webMapCoords}>
+                {yard.latitude.toFixed(6)}, {yard.longitude.toFixed(6)}
+              </Text>
+            </View>
+          )}
           <TouchableOpacity style={styles.mapOverlay} onPress={openInMaps}>
             <MapPin size={20} color="#FFFFFF" />
             <Text style={styles.mapOverlayText}>Open in Maps</Text>
@@ -188,7 +210,8 @@ export default function HiveDetailScreen() {
         </View>
       )}
     </View>
-  );
+    );
+  };
 
   const renderInspections = () => (
     <View>
@@ -1327,5 +1350,21 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "600" as const,
+  },
+  webMapFallback: {
+    backgroundColor: Colors.light.background,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
+  webMapText: {
+    fontSize: 16,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
+    marginTop: 12,
+  },
+  webMapCoords: {
+    fontSize: 14,
+    color: Colors.light.tabIconDefault,
   },
 });
