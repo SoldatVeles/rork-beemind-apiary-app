@@ -22,6 +22,7 @@ export const translations = {
       no: "No",
       confirm: "Confirm",
       apply: "Apply",
+      continue: "Continue",
     },
     tabs: {
       home: "Home",
@@ -309,6 +310,14 @@ export const translations = {
       inStock: "In Stock",
       all: "All",
     },
+    onboarding: {
+      beginner: "Beginner",
+      beginnerDesc: "Just starting your beekeeping journey",
+      intermediate: "Intermediate",
+      intermediateDesc: "Managing a growing apiary",
+      advanced: "Advanced",
+      advancedDesc: "Professional beekeeper",
+    },
   },
   es: {
     common: {
@@ -331,6 +340,7 @@ export const translations = {
       no: "No",
       confirm: "Confirmar",
       apply: "Aplicar",
+      continue: "Continuar",
     },
     tabs: {
       home: "Inicio",
@@ -618,6 +628,14 @@ export const translations = {
       inStock: "En Stock",
       all: "Todos",
     },
+    onboarding: {
+      beginner: "Principiante",
+      beginnerDesc: "Comenzando tu viaje en la apicultura",
+      intermediate: "Intermedio",
+      intermediateDesc: "Gestionando un apiario en crecimiento",
+      advanced: "Avanzado",
+      advancedDesc: "Apicultor profesional",
+    },
   },
   pt: {
     common: {
@@ -640,6 +658,7 @@ export const translations = {
       no: "Não",
       confirm: "Confirmar",
       apply: "Aplicar",
+      continue: "Continuar",
     },
     tabs: {
       home: "Início",
@@ -926,6 +945,14 @@ export const translations = {
       lowStock: "Estoque Baixo",
       inStock: "Em Estoque",
       all: "Todos",
+    },
+    onboarding: {
+      beginner: "Iniciante",
+      beginnerDesc: "Começando sua jornada na apicultura",
+      intermediate: "Intermediário",
+      intermediateDesc: "Gerenciando um apiário em crescimento",
+      advanced: "Avançado",
+      advancedDesc: "Apicultor profissional",
     },
   },
 };

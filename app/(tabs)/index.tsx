@@ -1,21 +1,28 @@
 import { useEffect } from "react";
+import { Redirect } from "expo-router";
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform } from "react-native";
 import { AlertCircle, CheckCircle, Clock } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import { useBeeMindStore } from "@/store/beemind-store";
 import { useLanguage } from "@/store/language-store";
+import { useUserPreferences } from "@/store/user-preferences-store";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { tasks, inspections, hives, loadSeedData } = useBeeMindStore();
   const { t, language, setLanguage } = useLanguage();
+  const { hasCompletedOnboarding } = useUserPreferences();
 
   useEffect(() => {
     if (hives.length === 0) {
       loadSeedData();
     }
   }, [hives.length, loadSeedData]);
+
+  if (!hasCompletedOnboarding) {
+    return <Redirect href="/onboarding" />;
+  }
 
   const dueTasks = tasks
     .filter((task) => !task.is_done && task.due_at)
