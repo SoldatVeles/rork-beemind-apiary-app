@@ -1,4 +1,5 @@
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Alert } from "react-native";
+import { useEffect } from "react";
 import { Database, Download, Trash2, Info, ChevronRight, Activity, FileText, Languages, Sprout, TrendingUp, Award } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
@@ -12,6 +13,10 @@ export default function SettingsScreen() {
   const { yards, hives, inspections, tasks, loadSeedData } = useBeeMindStore();
   const { language, setLanguage, t } = useLanguage();
   const { experienceLevel, setExperienceLevel } = useUserPreferences();
+
+  useEffect(() => {
+    console.log("[Settings] Component rendered with experienceLevel:", experienceLevel);
+  }, [experienceLevel]);
 
   const handleLoadSeedData = () => {
     Alert.alert(
@@ -106,6 +111,9 @@ export default function SettingsScreen() {
   };
 
   const handleExperienceLevelChange = (level: ExperienceLevel) => {
+    console.log("[Settings] Current level:", experienceLevel);
+    console.log("[Settings] Attempting to change to level:", level);
+    
     Alert.alert(
       t.settings.changeLevelTitle || "Change Experience Level?",
       t.settings.changeLevelMessage || `Switching to ${level} will adjust available features. Continue?`,
@@ -114,7 +122,9 @@ export default function SettingsScreen() {
         {
           text: t.common.confirm || "Confirm",
           onPress: () => {
+            console.log("[Settings] Calling setExperienceLevel with:", level);
             setExperienceLevel(level);
+            console.log("[Settings] After setExperienceLevel, current level:", useUserPreferences.getState().experienceLevel);
             Alert.alert(t.common.success, t.settings.levelChanged || "Experience level updated successfully!");
           },
         },
