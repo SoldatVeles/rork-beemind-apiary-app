@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Alert, Modal, TextInput } from "react-native";
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Alert, Modal, TextInput, Linking } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Hexagon, Edit, Trash2, Plus, Calendar, Crown, CheckSquare, X, Pill } from "lucide-react-native";
+import { Hexagon, Edit, Trash2, Plus, Calendar, Crown, CheckSquare, X, Pill, MapPin } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { useBeeMindStore } from "@/store/beemind-store";
 import type { QueenStatus } from "@/types";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 
 type TabType = "overview" | "inspections" | "queen" | "tasks" | "treatments";
 
@@ -81,8 +82,57 @@ export default function HiveDetailScreen() {
     }
   };
 
+  const openInMaps = () => {
+    if (!yard || !yard.latitude || !yard.longitude) return;
+
+    const scheme = Platform.select({
+      ios: "maps:0,0?q=",
+      android: "geo:0,0?q=",
+      default: "https://www.google.com/maps/search/?api=1&query=",
+    });
+    const latLng = `${yard.latitude},${yard.longitude}`;
+    const url = Platform.select({
+      ios: `${scheme}${hive.label}@${latLng}`,
+      android: `${scheme}${latLng}(${hive.label})`,
+      default: `${scheme}${latLng}`,
+    });
+    Linking.openURL(url);
+  };
+
   const renderOverview = () => (
     <View>
+      {yard && yard.latitude && yard.longitude && (
+        <View style={styles.mapContainer}>
+          <MapView
+            style={styles.map}
+            provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+            initialRegion={{
+              latitude: yard.latitude,
+              longitude: yard.longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            }}
+            scrollEnabled={false}
+            zoomEnabled={false}
+            rotateEnabled={false}
+            pitchEnabled={false}
+          >
+            <Marker
+              coordinate={{
+                latitude: yard.latitude,
+                longitude: yard.longitude,
+              }}
+              title={hive.label}
+              description={yard.name}
+            />
+          </MapView>
+          <TouchableOpacity style={styles.mapOverlay} onPress={openInMaps}>
+            <MapPin size={20} color="#FFFFFF" />
+            <Text style={styles.mapOverlayText}>Open in Maps</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.infoCard}>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Yard</Text>
@@ -1228,5 +1278,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.tabIconDefault,
     fontStyle: "italic",
+  },
+  mapContainer: {
+    height: 200,
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 16,
+    position: "relative",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  map: {
+    flex: 1,
+  },
+  mapOverlay: {
+    position: "absolute",
+    bottom: 12,
+    right: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  mapOverlayText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600" as const,
   },
 });
