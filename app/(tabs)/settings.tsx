@@ -1,15 +1,17 @@
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Alert } from "react-native";
-import { Database, Download, Trash2, Info, ChevronRight, Activity, FileText, Languages } from "lucide-react-native";
+import { Database, Download, Trash2, Info, ChevronRight, Activity, FileText, Languages, Sprout, TrendingUp, Award } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import { useBeeMindStore } from "@/store/beemind-store";
 import { useLanguage } from "@/store/language-store";
 import type { Language } from "@/constants/translations";
+import { useUserPreferences, type ExperienceLevel } from "@/store/user-preferences-store";
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { yards, hives, inspections, tasks, loadSeedData } = useBeeMindStore();
   const { language, setLanguage, t } = useLanguage();
+  const { experienceLevel, setExperienceLevel } = useUserPreferences();
 
   const handleLoadSeedData = () => {
     Alert.alert(
@@ -103,8 +105,99 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleExperienceLevelChange = (level: ExperienceLevel) => {
+    Alert.alert(
+      t.settings.changeLevelTitle || "Change Experience Level?",
+      t.settings.changeLevelMessage || `Switching to ${level} will adjust available features. Continue?`,
+      [
+        { text: t.common.cancel, style: "cancel" },
+        {
+          text: t.common.confirm || "Confirm",
+          onPress: () => {
+            setExperienceLevel(level);
+            Alert.alert(t.common.success, t.settings.levelChanged || "Experience level updated successfully!");
+          },
+        },
+      ]
+    );
+  };
+
+  const getLevelInfo = (level: ExperienceLevel) => {
+    switch (level) {
+      case "beginner":
+        return {
+          icon: Sprout,
+          title: t.onboarding?.beginner || "Beginner",
+          description: t.onboarding?.beginnerDesc || "Just starting your beekeeping journey",
+          color: "#10B981",
+        };
+      case "intermediate":
+        return {
+          icon: TrendingUp,
+          title: t.onboarding?.intermediate || "Intermediate",
+          description: t.onboarding?.intermediateDesc || "Managing a growing apiary",
+          color: "#F59E0B",
+        };
+      case "advanced":
+        return {
+          icon: Award,
+          title: t.onboarding?.advanced || "Advanced",
+          description: t.onboarding?.advancedDesc || "Professional beekeeper",
+          color: "#8B5CF6",
+        };
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t.settings.experienceLevel || "Experience Level"}</Text>
+        <Text style={styles.sectionDescription}>
+          {t.settings.experienceLevelDesc || "Your experience level controls which features are available and what tips you see."}
+        </Text>
+        <View style={styles.levelContainer}>
+          {(["beginner", "intermediate", "advanced"] as const).map((level) => {
+            const info = getLevelInfo(level);
+            const Icon = info.icon;
+            const isActive = experienceLevel === level;
+
+            return (
+              <TouchableOpacity
+                key={level}
+                style={[
+                  styles.levelButton,
+                  isActive && styles.levelButtonActive,
+                  { borderColor: isActive ? info.color : Colors.light.border },
+                ]}
+                onPress={() => handleExperienceLevelChange(level)}
+              >
+                <View
+                  style={[
+                    styles.levelIconContainer,
+                    { backgroundColor: info.color + "20" },
+                  ]}
+                >
+                  <Icon size={24} color={info.color} />
+                </View>
+                <View style={styles.levelTextContainer}>
+                  <Text
+                    style={[
+                      styles.levelButtonTitle,
+                      isActive && { color: info.color },
+                    ]}
+                  >
+                    {info.title}
+                  </Text>
+                  <Text style={styles.levelButtonDescription}>
+                    {info.description}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t.settings.language}</Text>
         <View style={styles.languageContainer}>
@@ -383,5 +476,69 @@ const styles = StyleSheet.create({
   },
   languageButtonTextActive: {
     color: "#FFFFFF",
+  },
+  levelContainer: {
+    gap: 12,
+  },
+  levelButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.light.card,
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+    borderWidth: 2,
+    borderColor: Colors.light.border,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
+  },
+  levelButtonActive: {
+    borderWidth: 3,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  levelIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  levelTextContainer: {
+    flex: 1,
+  },
+  levelButtonTitle: {
+    fontSize: 16,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
+    marginBottom: 2,
+  },
+  levelButtonDescription: {
+    fontSize: 13,
+    color: Colors.light.tabIconDefault,
+  },
+  sectionDescription: {
+    fontSize: 14,
+    color: Colors.light.tabIconDefault,
+    marginBottom: 16,
+    lineHeight: 20,
   },
 });
