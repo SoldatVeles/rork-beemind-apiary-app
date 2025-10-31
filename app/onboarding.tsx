@@ -8,10 +8,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Sprout, TrendingUp, Award, CheckCircle } from "lucide-react-native";
+import { Sprout, TrendingUp, Award, CheckCircle, Globe } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { useUserPreferences, type ExperienceLevel } from "@/store/user-preferences-store";
-import { useLanguage } from "@/store/language-store";
+import { useLanguage, type Language } from "@/store/language-store";
 
 interface LevelOption {
   level: ExperienceLevel;
@@ -25,8 +25,15 @@ interface LevelOption {
 export default function OnboardingScreen() {
   const router = useRouter();
   const { setExperienceLevel, completeOnboarding } = useUserPreferences();
-  const { t } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
+  const [step, setStep] = useState<"language" | "level">("language");
   const [selectedLevel, setSelectedLevel] = useState<ExperienceLevel | null>(null);
+
+  const languages: { code: Language; name: string; flag: string }[] = [
+    { code: "en", name: "English", flag: "🇬🇧" },
+    { code: "es", name: "Español", flag: "🇪🇸" },
+    { code: "pt", name: "Português", flag: "🇵🇹" },
+  ];
 
   const levels: LevelOption[] = [
     {
@@ -73,6 +80,11 @@ export default function OnboardingScreen() {
     },
   ];
 
+  const handleLanguageSelect = async (lang: Language) => {
+    await setLanguage(lang);
+    setStep("level");
+  };
+
   const handleContinue = () => {
     if (selectedLevel) {
       setExperienceLevel(selectedLevel);
@@ -80,6 +92,46 @@ export default function OnboardingScreen() {
       router.replace("/(tabs)");
     }
   };
+
+  if (step === "language") {
+    return (
+      <SafeAreaView style={styles.flex} edges={["top", "bottom"]}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+          <View style={styles.header}>
+            <View style={styles.iconContainer2}>
+              <Globe size={48} color={Colors.light.primary} />
+            </View>
+            <Text style={styles.title}>Welcome to BeeMind! 🐝</Text>
+            <Text style={styles.subtitle}>
+              Choose your preferred language to get started
+            </Text>
+          </View>
+
+          {languages.map((lang) => (
+            <TouchableOpacity
+              key={lang.code}
+              style={[
+                styles.languageCard,
+                language === lang.code && styles.languageCardSelected,
+              ]}
+              onPress={() => handleLanguageSelect(lang.code)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.flagIcon}>{lang.flag}</Text>
+              <Text style={styles.languageName}>{lang.name}</Text>
+              {language === lang.code && (
+                <CheckCircle size={24} color={Colors.light.primary} />
+              )}
+            </TouchableOpacity>
+          ))}
+
+          <Text style={styles.footerNote}>
+            💡 You can change the language anytime in Settings.
+          </Text>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.flex} edges={["top", "bottom"]}>
@@ -276,5 +328,43 @@ const styles = StyleSheet.create({
     color: Colors.light.tabIconDefault,
     textAlign: "center",
     lineHeight: 20,
+  },
+  iconContainer2: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.light.primary + "20",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  languageCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.light.card,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: Colors.light.border,
+  },
+  languageCardSelected: {
+    borderWidth: 3,
+    borderColor: Colors.light.primary,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  flagIcon: {
+    fontSize: 40,
+    marginRight: 16,
+  },
+  languageName: {
+    fontSize: 20,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
+    flex: 1,
   },
 });

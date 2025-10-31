@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import createContextHook from "@nkzw/create-context-hook";
-import { translations, Language } from "@/constants/translations";
+import { translations, type Language } from "@/constants/translations";
+
+export type { Language };
 
 const LANGUAGE_STORAGE_KEY = "@beemind_language";
 
