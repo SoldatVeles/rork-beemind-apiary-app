@@ -493,7 +493,7 @@ export default function HiveDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.form}>
+            <ScrollView style={styles.form} keyboardShouldPersistTaps="handled">
               <Text style={styles.label}>Hatch Date (YYYY-MM-DD)</Text>
               <TextInput
                 style={styles.input}
@@ -600,7 +600,7 @@ export default function HiveDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.form}>
+            <ScrollView style={styles.form} keyboardShouldPersistTaps="handled">
               <Text style={styles.label}>Product Name *</Text>
               <TextInput
                 style={styles.input}

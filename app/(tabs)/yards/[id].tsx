@@ -258,7 +258,7 @@ export default function YardDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.form}>
+            <ScrollView style={styles.form} keyboardShouldPersistTaps="handled">
               <Text style={styles.label}>Name *</Text>
               <TextInput
                 style={styles.input}
@@ -349,7 +349,7 @@ export default function YardDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.form}>
+            <ScrollView style={styles.form} keyboardShouldPersistTaps="handled">
               <Text style={styles.label}>Label *</Text>
               <TextInput
                 style={styles.input}

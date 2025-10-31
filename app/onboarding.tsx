@@ -96,7 +96,7 @@ export default function OnboardingScreen() {
   if (step === "language") {
     return (
       <SafeAreaView style={styles.flex} edges={["top", "bottom"]}>
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <View style={styles.iconContainer2}>
               <Globe size={48} color={Colors.light.primary} />
