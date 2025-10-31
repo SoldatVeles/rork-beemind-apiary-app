@@ -9,6 +9,38 @@ import type { QueenStatus } from "@/types";
 
 type TabType = "overview" | "inspections" | "queen" | "tasks" | "treatments";
 
+const NativeMapView = ({ latitude, longitude, label, description }: { latitude: number; longitude: number; label: string; description: string }) => {
+  const MapView = require('react-native-maps').default;
+  const Marker = require('react-native-maps').Marker;
+  const PROVIDER_GOOGLE = require('react-native-maps').PROVIDER_GOOGLE;
+
+  return (
+    <MapView
+      style={styles.map}
+      provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+      initialRegion={{
+        latitude,
+        longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }}
+      scrollEnabled={false}
+      zoomEnabled={false}
+      rotateEnabled={false}
+      pitchEnabled={false}
+    >
+      <Marker
+        coordinate={{
+          latitude,
+          longitude,
+        }}
+        title={label}
+        description={description}
+      />
+    </MapView>
+  );
+};
+
 export default function HiveDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -100,53 +132,29 @@ export default function HiveDetailScreen() {
   };
 
   const renderOverview = () => {
-    let MapView: any = null;
-    let Marker: any = null;
-    let PROVIDER_GOOGLE: any = null;
-
-    if (Platform.OS !== 'web') {
-      const maps = require('react-native-maps');
-      MapView = maps.default;
-      Marker = maps.Marker;
-      PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE;
-    }
-
     return (
     <View>
       {yard && yard.latitude && yard.longitude && (
         <View style={styles.mapContainer}>
-          {Platform.OS !== 'web' && MapView ? (
-            <MapView
-              style={styles.map}
-              provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
-              initialRegion={{
-                latitude: yard.latitude,
-                longitude: yard.longitude,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
+          {Platform.OS === 'web' ? (
+            <iframe
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 0,
+                borderRadius: 12,
               }}
-              scrollEnabled={false}
-              zoomEnabled={false}
-              rotateEnabled={false}
-              pitchEnabled={false}
-            >
-              <Marker
-                coordinate={{
-                  latitude: yard.latitude,
-                  longitude: yard.longitude,
-                }}
-                title={hive.label}
-                description={yard.name}
-              />
-            </MapView>
+              src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyC3tKHxZ5yJwJJHC5pF8qX0uFiKCvFd4vA&q=${yard.latitude},${yard.longitude}&zoom=15`}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
           ) : (
-            <View style={[styles.map, styles.webMapFallback]}>
-              <MapPin size={48} color={Colors.light.primary} />
-              <Text style={styles.webMapText}>{yard.name}</Text>
-              <Text style={styles.webMapCoords}>
-                {yard.latitude.toFixed(6)}, {yard.longitude.toFixed(6)}
-              </Text>
-            </View>
+            <NativeMapView
+              latitude={yard.latitude}
+              longitude={yard.longitude}
+              label={hive.label}
+              description={yard.name}
+            />
           )}
           <TouchableOpacity style={styles.mapOverlay} onPress={openInMaps}>
             <MapPin size={20} color="#FFFFFF" />
