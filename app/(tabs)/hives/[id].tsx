@@ -137,29 +137,34 @@ export default function HiveDetailScreen() {
       {yard && yard.latitude && yard.longitude && (
         <View style={styles.mapContainer}>
           {Platform.OS === 'web' ? (
-            <iframe
-              style={{
-                width: '100%',
-                height: '100%',
-                border: 0,
-                borderRadius: 12,
-              }}
-              src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyC3tKHxZ5yJwJJHC5pF8qX0uFiKCvFd4vA&q=${yard.latitude},${yard.longitude}&zoom=15`}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
+            <TouchableOpacity
+              style={styles.webMapFallback}
+              onPress={openInMaps}
+              activeOpacity={0.8}
+            >
+              <MapPin size={48} color={Colors.light.primary} />
+              <Text style={styles.webMapText}>{hive.label}</Text>
+              <Text style={styles.webMapCoords}>
+                {yard.latitude.toFixed(4)}, {yard.longitude.toFixed(4)}
+              </Text>
+              <View style={styles.webMapButton}>
+                <Text style={styles.webMapButtonText}>View on Google Maps</Text>
+              </View>
+            </TouchableOpacity>
           ) : (
-            <NativeMapView
-              latitude={yard.latitude}
-              longitude={yard.longitude}
-              label={hive.label}
-              description={yard.name}
-            />
+            <>
+              <NativeMapView
+                latitude={yard.latitude}
+                longitude={yard.longitude}
+                label={hive.label}
+                description={yard.name}
+              />
+              <TouchableOpacity style={styles.mapOverlay} onPress={openInMaps}>
+                <MapPin size={20} color="#FFFFFF" />
+                <Text style={styles.mapOverlayText}>Open in Maps</Text>
+              </TouchableOpacity>
+            </>
           )}
-          <TouchableOpacity style={styles.mapOverlay} onPress={openInMaps}>
-            <MapPin size={20} color="#FFFFFF" />
-            <Text style={styles.mapOverlayText}>Open in Maps</Text>
-          </TouchableOpacity>
         </View>
       )}
 
@@ -1360,10 +1365,12 @@ const styles = StyleSheet.create({
     fontWeight: "600" as const,
   },
   webMapFallback: {
+    flex: 1,
     backgroundColor: Colors.light.background,
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
+    borderRadius: 12,
   },
   webMapText: {
     fontSize: 16,
@@ -1374,5 +1381,17 @@ const styles = StyleSheet.create({
   webMapCoords: {
     fontSize: 14,
     color: Colors.light.tabIconDefault,
+  },
+  webMapButton: {
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  webMapButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600" as const,
   },
 });
