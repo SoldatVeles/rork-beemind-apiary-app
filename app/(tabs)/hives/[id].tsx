@@ -9,21 +9,14 @@ import type { QueenStatus } from "@/types";
 
 type TabType = "overview" | "inspections" | "queen" | "tasks" | "treatments";
 
-let MapView: any;
-let Marker: any;
-let PROVIDER_GOOGLE: any;
-
-if (Platform.OS !== 'web') {
-  const maps = require('react-native-maps');
-  MapView = maps.default;
-  Marker = maps.Marker;
-  PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE;
-}
-
 const NativeMapView = ({ latitude, longitude, label, description }: { latitude: number; longitude: number; label: string; description: string }) => {
-  if (Platform.OS === 'web' || !MapView) {
+  if (Platform.OS === 'web') {
     return null;
   }
+
+  const MapView = require('react-native-maps').default;
+  const Marker = require('react-native-maps').Marker;
+  const PROVIDER_GOOGLE = require('react-native-maps').PROVIDER_GOOGLE;
 
   return (
     <MapView
