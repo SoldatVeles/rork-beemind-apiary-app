@@ -6,6 +6,7 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { LanguageProvider, useLanguage } from "@/store/language-store";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { trpc, trpcClient } from "@/lib/trpc";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -47,11 +48,13 @@ function AppContent() {
 
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <AppContent />
-      </LanguageProvider>
-    </QueryClientProvider>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
+          <AppContent />
+        </LanguageProvider>
+      </QueryClientProvider>
+    </trpc.Provider>
   );
 }
 
