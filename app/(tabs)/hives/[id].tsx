@@ -5,7 +5,7 @@ import { Hexagon, Edit, Trash2, Plus, Calendar, Crown, CheckSquare, X, Pill, Map
 import Colors from "@/constants/colors";
 import { useBeeMindStore } from "@/store/beemind-store";
 import type { QueenStatus } from "@/types";
-import MapViewComponent from "./MapView";
+import MapViewComponent from "./MapView.native";
 
 
 type TabType = "overview" | "inspections" | "queen" | "tasks" | "treatments";
