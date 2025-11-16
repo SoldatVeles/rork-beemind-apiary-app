@@ -1,23 +1,25 @@
-const ink = "#0D1424";
-const deepSea = "#172B45";
-const honey = "#F9B44C";
-const aqua = "#5BD8F8";
-const slate = "#8998B3";
-const success = "#34D399";
-const warning = "#FACC15";
-const error = "#FB7185";
+const midnight = "#131C2A";
+const parchment = "#F7F2E7";
+const bone = "#FFFFFF";
+const amber = "#FFB357";
+const tide = "#63B2C5";
+const lilac = "#8F9AC3";
+const success = "#3EBE82";
+const warning = "#F6C251";
+const error = "#F16A74";
+const border = "#E1D8C7";
 
 export default {
   light: {
-    text: "#E6EDF7",
-    background: ink,
-    card: deepSea,
-    tint: honey,
-    tabIconDefault: slate,
-    tabIconSelected: honey,
-    border: "#213554",
-    primary: honey,
-    secondary: aqua,
+    text: midnight,
+    background: parchment,
+    card: bone,
+    tint: amber,
+    tabIconDefault: lilac,
+    tabIconSelected: amber,
+    border,
+    primary: amber,
+    secondary: tide,
     success,
     warning,
     error,
