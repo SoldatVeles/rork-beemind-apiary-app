@@ -86,11 +86,15 @@ export default function OnboardingScreen() {
   };
 
   const handleContinue = () => {
-    if (selectedLevel) {
-      setExperienceLevel(selectedLevel);
-      completeOnboarding();
-      router.replace("/(tabs)");
+    if (!selectedLevel) {
+      console.log("[Onboarding] Continue tapped without level selection");
+      return;
     }
+
+    console.log("[Onboarding] Setting experience level", selectedLevel);
+    setExperienceLevel(selectedLevel);
+    completeOnboarding();
+    router.replace("/(tabs)/home");
   };
 
   if (step === "language") {
