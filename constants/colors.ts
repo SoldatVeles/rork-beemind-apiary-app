@@ -1,23 +1,23 @@
-const honey = "#F5B326";
-const charcoal = "#1F1F1F";
-const offWhite = "#FFF9E9";
-const gray = "#666666";
-const lightGray = "#E5E5E5";
-const success = "#4CAF50";
-const warning = "#FF9800";
-const error = "#F44336";
+const ink = "#0D1424";
+const deepSea = "#172B45";
+const honey = "#F9B44C";
+const aqua = "#5BD8F8";
+const slate = "#8998B3";
+const success = "#34D399";
+const warning = "#FACC15";
+const error = "#FB7185";
 
 export default {
   light: {
-    text: charcoal,
-    background: offWhite,
-    card: "#FFFFFF",
+    text: "#E6EDF7",
+    background: ink,
+    card: deepSea,
     tint: honey,
-    tabIconDefault: gray,
+    tabIconDefault: slate,
     tabIconSelected: honey,
-    border: lightGray,
+    border: "#213554",
     primary: honey,
-    secondary: charcoal,
+    secondary: aqua,
     success,
     warning,
     error,

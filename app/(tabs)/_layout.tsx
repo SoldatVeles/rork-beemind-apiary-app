@@ -2,9 +2,9 @@ import { Tabs } from "expo-router";
 import { Home, MapPin, Hexagon, CheckSquare, Settings, Package, PackageOpen } from "lucide-react-native";
 import React from "react";
 
-import Colors from "@/constants/colors";
-import { useLanguage } from "@/store/language-store";
-import { useUserPreferences } from "@/store/user-preferences-store";
+import Colors from "../../constants/colors";
+import { useLanguage } from "../../store/language-store";
+import { useUserPreferences } from "../../store/user-preferences-store";
 
 export default function TabLayout() {
   const { t } = useLanguage();
@@ -16,6 +16,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      initialRouteName="home"
       screenOptions={{
         tabBarActiveTintColor: Colors.light.tint,
         tabBarInactiveTintColor: Colors.light.tabIconDefault,
@@ -27,11 +28,11 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
           title: t.tabs.home,
           tabBarIcon: ({ color }) => <Home size={24} color={color} />,
-          href: isBeginnerOrHigher ? "/(tabs)" : null,
+          href: isBeginnerOrHigher ? "/(tabs)/home" : null,
         }}
       />
       <Tabs.Screen
