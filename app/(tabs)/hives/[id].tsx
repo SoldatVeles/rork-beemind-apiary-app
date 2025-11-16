@@ -5,50 +5,10 @@ import { Hexagon, Edit, Trash2, Plus, Calendar, Crown, CheckSquare, X, Pill, Map
 import Colors from "@/constants/colors";
 import { useBeeMindStore } from "@/store/beemind-store";
 import type { QueenStatus } from "@/types";
+import MapViewComponent from "./MapView";
 
 
 type TabType = "overview" | "inspections" | "queen" | "tasks" | "treatments";
-
-const NativeMapView = ({ latitude, longitude, label, description }: { latitude: number; longitude: number; label: string; description: string }) => {
-  if (Platform.OS === 'web') {
-    return null;
-  }
-
-  try {
-    const MapView = require('react-native-maps').default;
-    const Marker = require('react-native-maps').Marker;
-    const PROVIDER_GOOGLE = require('react-native-maps').PROVIDER_GOOGLE;
-
-    return (
-      <MapView
-        style={styles.map}
-        provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
-        initialRegion={{
-          latitude,
-          longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        }}
-        scrollEnabled={false}
-        zoomEnabled={false}
-        rotateEnabled={false}
-        pitchEnabled={false}
-      >
-        <Marker
-          coordinate={{
-            latitude,
-            longitude,
-          }}
-          title={label}
-          description={description}
-        />
-      </MapView>
-    );
-  } catch (error) {
-    console.log('Maps not available:', error);
-    return null;
-  }
-};
 
 export default function HiveDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -162,7 +122,7 @@ export default function HiveDetailScreen() {
             </TouchableOpacity>
           ) : (
             <>
-              <NativeMapView
+              <MapViewComponent
                 latitude={yard.latitude}
                 longitude={yard.longitude}
                 label={hive.label}
