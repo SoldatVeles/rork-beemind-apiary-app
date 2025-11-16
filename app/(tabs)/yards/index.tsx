@@ -1,56 +1,48 @@
-import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Modal, TextInput, Alert, Linking } from "react-native";
-import { MapPin, Plus, X, Map as MapIcon } from "lucide-react-native";
+import { useMemo, useState } from "react";
+import {
+  Linking,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Map as MapIcon, MapPin, Navigation, Plus, Sparkles, X } from "lucide-react-native";
 import { useRouter } from "expo-router";
-import Colors from "@/constants/colors";
-import { useBeeMindStore } from "@/store/beemind-store";
-import { useLanguage } from "@/store/language-store";
-
-
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Colors from "../../../constants/colors";
+import { useBeeMindStore } from "../../../store/beemind-store";
+import { useLanguage } from "../../../store/language-store";
 
 export default function YardsScreen() {
   const router = useRouter();
-  const { yards, hives, addYard } = useBeeMindStore();
+  const insets = useSafeAreaInsets();
+  const { yards, hives } = useBeeMindStore();
   const { t } = useLanguage();
-  const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [mapModalVisible, setMapModalVisible] = useState<boolean>(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    address: "",
-    latitude: "",
-    longitude: "",
-    elevation_m: "",
-    notes: "",
-  });
 
-  const getHiveCount = (yardId: string) => {
-    return hives.filter((h) => h.yard_id === yardId).length;
-  };
+  const yardsWithLocation = useMemo(() => {
+    return yards.filter((yard) => typeof yard.latitude === "number" && typeof yard.longitude === "number");
+  }, [yards]);
 
-  const handleSubmit = () => {
-    if (!formData.name.trim()) {
-      Alert.alert(t.common.error, t.yards.nameRequired);
-      return;
-    }
-
-    addYard({
-      name: formData.name,
-      address: formData.address || undefined,
-      latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
-      longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
-      elevation_m: formData.elevation_m ? parseFloat(formData.elevation_m) : undefined,
-      notes: formData.notes || undefined,
-    });
-
-    setFormData({ name: "", address: "", latitude: "", longitude: "", elevation_m: "", notes: "" });
-    setModalVisible(false);
-    Alert.alert(t.common.success, t.yards.created);
-  };
-
-  const yardsWithLocation = yards.filter((y) => y.latitude && y.longitude);
+  const hasYards = yards.length > 0;
   const hasYardsWithLocation = yardsWithLocation.length > 0;
 
+  const handleAddYard = () => {
+    console.log("[YardsScreen] Navigating to add yard form");
+    router.push("/(tabs)/yards/new");
+  };
+
+  const handleOpenYard = (yardId: string) => {
+    console.log("[YardsScreen] Opening yard detail", { yardId });
+    router.push({ pathname: "/(tabs)/yards/[id]", params: { id: yardId } });
+  };
+
   const openInMaps = (latitude: number, longitude: number, label: string) => {
+    console.log("[YardsScreen] Opening coordinate in maps", { latitude, longitude, label });
     const scheme = Platform.select({
       ios: "maps:0,0?q=",
       android: "geo:0,0?q=",
@@ -62,28 +54,34 @@ export default function YardsScreen() {
       android: `${scheme}${latLng}(${label})`,
       default: `${scheme}${latLng}`,
     });
-    Linking.openURL(url);
+    Linking.openURL(url ?? "");
+  };
+
+  const getHiveCount = (yardId: string) => {
+    return hives.filter((hive) => hive.yard_id === yardId).length;
   };
 
   const renderMapView = () => {
     return (
       <View style={styles.webMapContainer}>
-        <Text style={styles.mapPlaceholder}>📍 Map View</Text>
-        <Text style={styles.mapSubtext}>
-          Tap any yard below to open in your device's map app
-        </Text>
+        <Text style={styles.mapPlaceholder}>📍</Text>
+        <Text style={styles.mapSubtext}>{t.yards.mapHelper ?? "Tap a yard to open it in your preferred map app."}</Text>
         <View style={styles.yardsListInMap}>
           {yardsWithLocation.map((yard) => (
             <TouchableOpacity
               key={yard.id}
               style={styles.yardInMapButton}
-              onPress={() => openInMaps(yard.latitude!, yard.longitude!, yard.name)}
+              onPress={() => openInMaps(yard.latitude ?? 0, yard.longitude ?? 0, yard.name)}
+              testID={`yards-map-location-${yard.id}`}
             >
               <MapPin size={16} color={Colors.light.primary} />
-              <Text style={styles.yardInMapText}>{yard.name}</Text>
-              <Text style={styles.yardInMapCoords}>
-                {yard.latitude?.toFixed(4)}, {yard.longitude?.toFixed(4)}
-              </Text>
+              <View style={styles.yardInMapContent}>
+                <Text style={styles.yardInMapText}>{yard.name}</Text>
+                <Text style={styles.yardInMapCoords}>
+                  {yard.latitude?.toFixed(4)}, {yard.longitude?.toFixed(4)}
+                </Text>
+              </View>
+              <Navigation size={16} color={Colors.light.primary} />
             </TouchableOpacity>
           ))}
         </View>
@@ -92,166 +90,151 @@ export default function YardsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <View style={styles.screen} testID="yards-screen">
+      <LinearGradient
+        colors={["#0F172A", "#1E293B"]}
+        style={[styles.hero, { paddingTop: insets.top + 12 }]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.heroHeader}>
+          <View style={styles.heroIcon}>
+            <Sparkles size={20} color="#FACC15" />
+          </View>
+          <View style={styles.heroCopy}>
+            <Text style={styles.heroTitle}>{t.yards.titleHero ?? "Apiary yards"}</Text>
+            <Text style={styles.heroSubtitle}>
+              {hasYards
+                ? t.yards.heroSubtitleWithCount?.replace("{count}", String(yards.length)) ?? `${yards.length} curated locations to anchor your colonies.`
+                : t.yards.heroSubtitleEmpty ?? "Designate your first apiary hub with coordinates, notes, and context."}
+            </Text>
+          </View>
+        </View>
+      </LinearGradient>
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        testID="yards-scroll-view"
+      >
+        <TouchableOpacity
+          style={styles.createCard}
+          onPress={handleAddYard}
+          activeOpacity={0.88}
+          testID="yards-add-card"
+        >
+          <View style={styles.createIconWrapper}>
+            <Plus size={24} color="#0F172A" />
+          </View>
+          <View style={styles.createCopy}>
+            <Text style={styles.createTitle}>{t.yards.quickCreateTitle ?? "Add a new yard"}</Text>
+            <Text style={styles.createSubtitle}>
+              {t.yards.quickCreateSubtitle ?? "Document access, orientation, and microclimate for smarter deployments."}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
         {hasYardsWithLocation && (
           <TouchableOpacity
             style={styles.mapPreviewCard}
-            onPress={() => setMapModalVisible(true)}
+            onPress={() => {
+              console.log("[YardsScreen] Opening yards map modal");
+              setMapModalVisible(true);
+            }}
+            activeOpacity={0.88}
+            testID="yards-map-preview"
           >
             <View style={styles.mapPreviewHeader}>
               <MapIcon size={20} color={Colors.light.primary} />
-              <Text style={styles.mapPreviewTitle}>{t.yards.viewMap || "View All Yards on Map"}</Text>
+              <Text style={styles.mapPreviewTitle}>{t.yards.viewMap ?? "View yards on map"}</Text>
             </View>
             <Text style={styles.mapPreviewSubtitle}>
-              {yardsWithLocation.length} {yardsWithLocation.length === 1 ? "yard" : "yards"} with location
+              {t.yards.mapPreviewSubtitle
+                ? t.yards.mapPreviewSubtitle.replace("{count}", String(yardsWithLocation.length))
+                : `${yardsWithLocation.length} ${yardsWithLocation.length === 1 ? "yard" : "yards"} with precise coordinates`}
             </Text>
           </TouchableOpacity>
         )}
 
-        {yards.length === 0 ? (
-          <View style={styles.emptyState}>
+        {hasYards ? (
+          <View style={styles.yardList} testID="yards-list">
+            {yards.map((yard) => (
+              <TouchableOpacity
+                key={yard.id}
+                style={styles.yardCard}
+                onPress={() => handleOpenYard(yard.id)}
+                activeOpacity={0.9}
+                testID={`yards-list-item-${yard.id}`}
+              >
+                <View style={styles.yardIcon}>
+                  <MapPin size={24} color={Colors.light.primary} />
+                </View>
+                <View style={styles.yardContent}>
+                  <Text style={styles.yardName}>{yard.name}</Text>
+                  {yard.address ? <Text style={styles.yardAddress}>{yard.address}</Text> : null}
+                  <View style={styles.yardStatsRow}>
+                    <Text style={styles.yardStat}>{getHiveCount(yard.id)} {t.yards.hives}</Text>
+                    {typeof yard.elevation_m === "number" ? (
+                      <Text style={styles.yardStat}>{yard.elevation_m}{t.yards.elevationM}</Text>
+                    ) : null}
+                    {yard.latitude && yard.longitude ? (
+                      <Text style={[styles.yardStat, styles.yardHasLocation]}>{t.yards.hasLocation ?? "Location saved"}</Text>
+                    ) : null}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyState} testID="yards-empty-state">
             <MapPin size={64} color={Colors.light.tabIconDefault} />
             <Text style={styles.emptyTitle}>{t.yards.noYards}</Text>
             <Text style={styles.emptyText}>{t.yards.addFirst}</Text>
-          </View>
-        ) : (
-          yards.map((yard) => (
             <TouchableOpacity
-              key={yard.id}
-              style={styles.yardCard}
-              onPress={() => router.push(`/(tabs)/yards/${yard.id}` as any)}
+              style={styles.emptyCta}
+              onPress={handleAddYard}
+              activeOpacity={0.85}
+              testID="yards-empty-add-button"
             >
-              <View style={styles.yardIcon}>
-                <MapPin size={24} color={Colors.light.primary} />
-              </View>
-              <View style={styles.yardContent}>
-                <Text style={styles.yardName}>{yard.name}</Text>
-                {yard.address && <Text style={styles.yardAddress}>{yard.address}</Text>}
-                <View style={styles.yardStats}>
-                  <Text style={styles.yardStat}>{getHiveCount(yard.id)} {t.yards.hives}</Text>
-                  {yard.elevation_m && (
-                    <Text style={styles.yardStat}>{yard.elevation_m}{t.yards.elevationM}</Text>
-                  )}
-                  {yard.latitude && yard.longitude && (
-                    <Text style={styles.yardStat}>📍 {t.yards.hasLocation || "Has location"}</Text>
-                  )}
-                </View>
-              </View>
+              <Text style={styles.emptyCtaLabel}>{t.yards.createYard}</Text>
             </TouchableOpacity>
-          ))
+          </View>
         )}
       </ScrollView>
 
-      <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
-        <Plus size={24} color="#FFFFFF" />
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={handleAddYard}
+        activeOpacity={0.85}
+        testID="yards-floating-add"
+      >
+        <Plus size={24} color="#0F172A" />
       </TouchableOpacity>
 
       <Modal
         visible={mapModalVisible}
         animationType="slide"
         transparent={false}
-        onRequestClose={() => setMapModalVisible(false)}
+        onRequestClose={() => {
+          console.log("[YardsScreen] Closing yards map modal");
+          setMapModalVisible(false);
+        }}
       >
         <View style={styles.mapModal}>
-          <View style={styles.mapModalHeader}>
-            <Text style={styles.mapModalTitle}>{t.yards.allYards || "All Yards"}</Text>
-            <TouchableOpacity onPress={() => setMapModalVisible(false)}>
+          <View style={[styles.mapModalHeader, { paddingTop: insets.top + 12 }]}>
+            <Text style={styles.mapModalTitle}>{t.yards.allYards ?? "All yards"}</Text>
+            <TouchableOpacity
+              onPress={() => {
+                console.log("[YardsScreen] Closing yards map modal via close button");
+                setMapModalVisible(false);
+              }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              testID="yards-map-close"
+            >
               <X size={24} color={Colors.light.text} />
             </TouchableOpacity>
           </View>
           {renderMapView()}
-        </View>
-      </Modal>
-
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t.yards.newYard}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <X size={24} color={Colors.light.text} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.form}>
-              <Text style={styles.label}>{t.yards.name} *</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.name}
-                onChangeText={(text) => setFormData({ ...formData, name: text })}
-                placeholder={t.yards.namePlaceholder}
-                placeholderTextColor={Colors.light.tabIconDefault}
-              />
-
-              <Text style={styles.label}>{t.yards.address}</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.address}
-                onChangeText={(text) => setFormData({ ...formData, address: text })}
-                placeholder={t.yards.addressPlaceholder}
-                placeholderTextColor={Colors.light.tabIconDefault}
-              />
-
-              <Text style={styles.label}>{t.yards.latitude || "Latitude"}</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.latitude}
-                onChangeText={(text) => setFormData({ ...formData, latitude: text })}
-                placeholder="e.g., 40.7128"
-                placeholderTextColor={Colors.light.tabIconDefault}
-                keyboardType="numeric"
-              />
-
-              <Text style={styles.label}>{t.yards.longitude || "Longitude"}</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.longitude}
-                onChangeText={(text) => setFormData({ ...formData, longitude: text })}
-                placeholder="e.g., -74.0060"
-                placeholderTextColor={Colors.light.tabIconDefault}
-                keyboardType="numeric"
-              />
-
-              <Text style={styles.label}>{t.yards.elevation}</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.elevation_m}
-                onChangeText={(text) => setFormData({ ...formData, elevation_m: text })}
-                placeholder={t.yards.elevationPlaceholder}
-                placeholderTextColor={Colors.light.tabIconDefault}
-                keyboardType="numeric"
-              />
-
-              <Text style={styles.label}>{t.yards.notes}</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.notes}
-                onChangeText={(text) => setFormData({ ...formData, notes: text })}
-                placeholder={t.yards.notesPlaceholder}
-                placeholderTextColor={Colors.light.tabIconDefault}
-                multiline
-                numberOfLines={4}
-              />
-            </ScrollView>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.button, styles.buttonSecondary]}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.buttonSecondaryText}>{t.common.cancel}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.buttonPrimary]} onPress={handleSubmit}>
-                <Text style={styles.buttonPrimaryText}>{t.yards.createYard}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </View>
       </Modal>
     </View>
@@ -259,131 +242,234 @@ export default function YardsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
     backgroundColor: Colors.light.background,
   },
-  content: {
-    padding: 16,
+  hero: {
+    paddingHorizontal: 24,
+    paddingBottom: 28,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  mapPreviewCard: {
-    backgroundColor: Colors.light.primary,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
+  heroHeader: {
+    flexDirection: "row",
+    gap: 16,
+    alignItems: "center",
+  },
+  heroIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 20,
+    backgroundColor: "rgba(250, 204, 21, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroCopy: {
+    flex: 1,
+    gap: 6,
+  },
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: "700" as const,
+    color: "#F8FAFC",
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: "rgba(226, 232, 240, 0.9)",
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 140,
+    gap: 20,
+  },
+  createCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    backgroundColor: Colors.light.card,
+    borderRadius: 20,
+    padding: 20,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.12,
+        shadowRadius: 20,
       },
       android: {
-        elevation: 4,
+        elevation: 6,
+      },
+      default: {
+        shadowColor: "rgba(15, 23, 42, 0.08)",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.16,
+        shadowRadius: 20,
       },
     }),
+  },
+  createIconWrapper: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    backgroundColor: "#FACC15",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  createCopy: {
+    flex: 1,
+    gap: 6,
+  },
+  createTitle: {
+    fontSize: 18,
+    fontWeight: "700" as const,
+    color: Colors.light.text,
+  },
+  createSubtitle: {
+    fontSize: 14,
+    color: Colors.light.tabIconDefault,
+    lineHeight: 20,
+  },
+  mapPreviewCard: {
+    backgroundColor: Colors.light.primary,
+    borderRadius: 20,
+    padding: 20,
   },
   mapPreviewHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
+    gap: 12,
+    marginBottom: 6,
   },
   mapPreviewTitle: {
     fontSize: 16,
     fontWeight: "600" as const,
-    color: "#FFFFFF",
+    color: "#0F172A",
   },
   mapPreviewSubtitle: {
     fontSize: 14,
-    color: "#FFFFFF",
-    opacity: 0.9,
+    color: "rgba(15, 23, 42, 0.75)",
+  },
+  yardList: {
+    gap: 16,
   },
   yardCard: {
     flexDirection: "row",
+    gap: 16,
     backgroundColor: Colors.light.card,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    padding: 20,
+    borderRadius: 18,
+    alignItems: "center",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.12,
+        shadowRadius: 12,
       },
       android: {
-        elevation: 2,
+        elevation: 4,
+      },
+      default: {
+        shadowColor: "rgba(15, 23, 42, 0.08)",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.14,
+        shadowRadius: 16,
       },
     }),
   },
   yardIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 20,
     backgroundColor: Colors.light.background,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 16,
   },
   yardContent: {
     flex: 1,
+    gap: 6,
   },
   yardName: {
     fontSize: 18,
-    fontWeight: "600" as const,
+    fontWeight: "700" as const,
     color: Colors.light.text,
-    marginBottom: 4,
   },
   yardAddress: {
     fontSize: 14,
     color: Colors.light.tabIconDefault,
-    marginBottom: 8,
   },
-  yardStats: {
+  yardStatsRow: {
     flexDirection: "row",
-    gap: 16,
+    flexWrap: "wrap",
+    gap: 12,
   },
   yardStat: {
     fontSize: 12,
+    fontWeight: "600" as const,
     color: Colors.light.tabIconDefault,
+    textTransform: "uppercase",
+    letterSpacing: 0.7,
+  },
+  yardHasLocation: {
+    color: Colors.light.primary,
   },
   emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
     paddingVertical: 80,
+    alignItems: "center",
+    gap: 16,
   },
   emptyTitle: {
     fontSize: 24,
-    fontWeight: "600" as const,
+    fontWeight: "700" as const,
     color: Colors.light.text,
-    marginTop: 16,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 15,
     color: Colors.light.tabIconDefault,
-    marginTop: 8,
     textAlign: "center",
+    paddingHorizontal: 24,
+    lineHeight: 22,
+  },
+  emptyCta: {
+    marginTop: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 18,
+    backgroundColor: Colors.light.primary,
+  },
+  emptyCtaLabel: {
+    fontSize: 15,
+    fontWeight: "700" as const,
+    color: "#0F172A",
   },
   fab: {
     position: "absolute",
-    right: 16,
-    bottom: 16,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.light.primary,
+    right: 24,
+    bottom: 24 + Platform.select({ ios: 0, android: 0, default: 16 }),
+    width: 62,
+    height: 62,
+    borderRadius: 22,
+    backgroundColor: "#FACC15",
     alignItems: "center",
     justifyContent: "center",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.18,
+        shadowRadius: 16,
       },
       android: {
-        elevation: 6,
+        elevation: 10,
+      },
+      default: {
+        shadowColor: "rgba(15, 23, 42, 0.18)",
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.2,
+        shadowRadius: 20,
       },
     }),
   },
@@ -393,136 +479,59 @@ const styles = StyleSheet.create({
   },
   mapModalHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
-    paddingTop: Platform.select({ ios: 60, default: 16 }),
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    backgroundColor: Colors.light.card,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.border,
-    backgroundColor: Colors.light.card,
   },
   mapModalTitle: {
     fontSize: 20,
-    fontWeight: "600" as const,
+    fontWeight: "700" as const,
     color: Colors.light.text,
-  },
-  map: {
-    flex: 1,
   },
   webMapContainer: {
     flex: 1,
-    padding: 20,
-    alignItems: "center",
-    backgroundColor: Colors.light.card,
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+    gap: 16,
+    backgroundColor: Colors.light.background,
   },
   mapPlaceholder: {
-    fontSize: 32,
-    marginBottom: 12,
+    fontSize: 40,
+    textAlign: "center",
   },
   mapSubtext: {
     fontSize: 14,
     color: Colors.light.tabIconDefault,
     textAlign: "center",
-    marginBottom: 20,
+    lineHeight: 22,
   },
   yardsListInMap: {
-    width: "100%",
+    gap: 12,
   },
   yardInMapButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.light.background,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    gap: 8,
+    gap: 12,
+    backgroundColor: Colors.light.card,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  yardInMapContent: {
+    flex: 1,
+    gap: 4,
   },
   yardInMapText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600" as const,
     color: Colors.light.text,
-    flex: 1,
   },
   yardInMapCoords: {
     fontSize: 12,
     color: Colors.light.tabIconDefault,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: Colors.light.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "90%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "600" as const,
-    color: Colors.light.text,
-  },
-  form: {
-    padding: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "500" as const,
-    color: Colors.light.text,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: Colors.light.background,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: Colors.light.text,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: "top",
-  },
-  modalActions: {
-    flexDirection: "row",
-    gap: 12,
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-  },
-  button: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  buttonPrimary: {
-    backgroundColor: Colors.light.primary,
-  },
-  buttonSecondary: {
-    backgroundColor: Colors.light.background,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  buttonPrimaryText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600" as const,
-  },
-  buttonSecondaryText: {
-    color: Colors.light.text,
-    fontSize: 16,
-    fontWeight: "600" as const,
   },
 });

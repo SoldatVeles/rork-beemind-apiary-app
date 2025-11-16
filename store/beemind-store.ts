@@ -12,7 +12,7 @@ import type {
   Task,
   Treatment,
   Yard,
-} from "@/types";
+} from "../types";
 
 interface BeeMindState {
   yards: Yard[];
@@ -26,7 +26,7 @@ interface BeeMindState {
   treatments: Treatment[];
   inventory: InventoryItem[];
 
-  addYard: (yard: Omit<Yard, "id" | "created_at">) => void;
+  addYard: (yard: Omit<Yard, "id" | "created_at">) => string;
   updateYard: (id: string, yard: Partial<Yard>) => void;
   deleteYard: (id: string) => void;
 
@@ -83,13 +83,19 @@ export const useBeeMindStore = create<BeeMindState>()(
       treatments: [],
       inventory: [],
 
-      addYard: (yard) =>
+      addYard: (yard) => {
+        const newYard = {
+          ...yard,
+          id: generateId(),
+          created_at: new Date().toISOString(),
+        } satisfies Yard;
+
         set((state) => ({
-          yards: [
-            ...state.yards,
-            { ...yard, id: generateId(), created_at: new Date().toISOString() },
-          ],
-        })),
+          yards: [...state.yards, newYard],
+        }));
+
+        return newYard.id;
+      },
 
       updateYard: (id, yard) =>
         set((state) => ({
