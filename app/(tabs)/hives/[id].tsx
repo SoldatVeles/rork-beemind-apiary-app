@@ -128,8 +128,13 @@ export default function HiveDetailScreen() {
                 label={hive.label}
                 description={yard.name}
               />
-              <TouchableOpacity style={styles.mapOverlay} onPress={openInMaps}>
-                <MapPin size={20} color="#FFFFFF" />
+              <TouchableOpacity
+                style={styles.mapOverlay}
+                onPress={openInMaps}
+                activeOpacity={0.85}
+                testID="hive-map-open-external"
+              >
+                <MapPin size={18} color="#0F172A" />
                 <Text style={styles.mapOverlayText}>Open in Maps</Text>
               </TouchableOpacity>
             </>
@@ -1307,31 +1312,39 @@ const styles = StyleSheet.create({
   },
   mapOverlay: {
     position: "absolute",
-    bottom: 12,
-    right: 12,
+    top: 14,
+    right: 14,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: Colors.light.primary,
-    paddingHorizontal: 12,
+    gap: 8,
+    backgroundColor: "#FACC15",
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 999,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
       },
       android: {
-        elevation: 4,
+        elevation: 6,
+      },
+      default: {
+        shadowColor: "rgba(15, 23, 42, 0.24)",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.22,
+        shadowRadius: 12,
       },
     }),
   },
   mapOverlayText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600" as const,
+    color: "#0F172A",
+    fontSize: 13,
+    fontWeight: "700" as const,
+    letterSpacing: 0.2,
+    textTransform: "uppercase",
   },
   webMapFallback: {
     flex: 1,
