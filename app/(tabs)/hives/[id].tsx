@@ -14,35 +14,40 @@ const NativeMapView = ({ latitude, longitude, label, description }: { latitude: 
     return null;
   }
 
-  const MapView = require('react-native-maps').default;
-  const Marker = require('react-native-maps').Marker;
-  const PROVIDER_GOOGLE = require('react-native-maps').PROVIDER_GOOGLE;
+  try {
+    const MapView = require('react-native-maps').default;
+    const Marker = require('react-native-maps').Marker;
+    const PROVIDER_GOOGLE = require('react-native-maps').PROVIDER_GOOGLE;
 
-  return (
-    <MapView
-      style={styles.map}
-      provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
-      initialRegion={{
-        latitude,
-        longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }}
-      scrollEnabled={false}
-      zoomEnabled={false}
-      rotateEnabled={false}
-      pitchEnabled={false}
-    >
-      <Marker
-        coordinate={{
+    return (
+      <MapView
+        style={styles.map}
+        provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+        initialRegion={{
           latitude,
           longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
         }}
-        title={label}
-        description={description}
-      />
-    </MapView>
-  );
+        scrollEnabled={false}
+        zoomEnabled={false}
+        rotateEnabled={false}
+        pitchEnabled={false}
+      >
+        <Marker
+          coordinate={{
+            latitude,
+            longitude,
+          }}
+          title={label}
+          description={description}
+        />
+      </MapView>
+    );
+  } catch (error) {
+    console.log('Maps not available:', error);
+    return null;
+  }
 };
 
 export default function HiveDetailScreen() {
