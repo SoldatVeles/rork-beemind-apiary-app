@@ -97,10 +97,31 @@ export const useBeeMindStore = create<BeeMindState>()(
         })),
 
       deleteYard: (id) =>
-        set((state) => ({
-          yards: state.yards.filter((y) => y.id !== id),
-          hives: state.hives.filter((h) => h.yard_id !== id),
-        })),
+        set((state) => {
+          const hiveIds = state.hives.filter((hive) => hive.yard_id === id).map((hive) => hive.id);
+          const deviceIds = state.devices
+            .filter((device) => device.hive_id && hiveIds.includes(device.hive_id))
+            .map((device) => device.id);
+
+          return {
+            yards: state.yards.filter((yard) => yard.id !== id),
+            hives: state.hives.filter((hive) => hive.yard_id !== id),
+            queens: state.queens.filter((queen) => !queen.hive_id || !hiveIds.includes(queen.hive_id)),
+            inspections: state.inspections.filter((inspection) => !hiveIds.includes(inspection.hive_id)),
+            tasks: state.tasks.filter(
+              (task) => task.yard_id !== id && (!task.hive_id || !hiveIds.includes(task.hive_id))
+            ),
+            harvests: state.harvests.filter(
+              (harvest) => harvest.yard_id !== id && (!harvest.hive_id || !hiveIds.includes(harvest.hive_id))
+            ),
+            treatments: state.treatments.filter((treatment) => !hiveIds.includes(treatment.hive_id)),
+            devices: state.devices.filter((device) => !deviceIds.includes(device.id)),
+            sensorReadings: state.sensorReadings.filter(
+              (reading) =>
+                !deviceIds.includes(reading.device_id) && (!reading.hive_id || !hiveIds.includes(reading.hive_id))
+            ),
+          };
+        }),
 
       addHive: (hive) =>
         set((state) => ({
@@ -116,11 +137,24 @@ export const useBeeMindStore = create<BeeMindState>()(
         })),
 
       deleteHive: (id) =>
-        set((state) => ({
-          hives: state.hives.filter((h) => h.id !== id),
-          inspections: state.inspections.filter((i) => i.hive_id !== id),
-          tasks: state.tasks.filter((t) => t.hive_id !== id),
-        })),
+        set((state) => {
+          const deviceIds = state.devices
+            .filter((device) => device.hive_id === id)
+            .map((device) => device.id);
+
+          return {
+            hives: state.hives.filter((hive) => hive.id !== id),
+            inspections: state.inspections.filter((inspection) => inspection.hive_id !== id),
+            tasks: state.tasks.filter((task) => task.hive_id !== id),
+            queens: state.queens.filter((queen) => queen.hive_id !== id),
+            harvests: state.harvests.filter((harvest) => harvest.hive_id !== id),
+            treatments: state.treatments.filter((treatment) => treatment.hive_id !== id),
+            devices: state.devices.filter((device) => device.hive_id !== id),
+            sensorReadings: state.sensorReadings.filter(
+              (reading) => reading.hive_id !== id && !deviceIds.includes(reading.device_id)
+            ),
+          };
+        }),
 
       addQueen: (queen) =>
         set((state) => ({
