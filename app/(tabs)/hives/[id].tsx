@@ -1,22 +1,94 @@
-import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Alert, Modal, TextInput, Linking } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Linking,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Hexagon, Edit, Trash2, Plus, Calendar, Crown, CheckSquare, X, Pill, MapPin } from "lucide-react-native";
-import Colors from "@/constants/colors";
-import { useBeeMindStore } from "@/store/beemind-store";
-import type { QueenStatus } from "@/types";
+import {
+  Hexagon,
+  Edit,
+  Trash2,
+  Plus,
+  Calendar,
+  Crown,
+  CheckSquare,
+  X,
+  Pill,
+  MapPin,
+  MapPinned,
+} from "lucide-react-native";
+import Colors from "../../../constants/colors";
+import { useBeeMindStore } from "../../../store/beemind-store";
+import type { HiveStatus } from "../../../types";
 import MapViewComponent from "./MapView";
 
+interface HiveEditFormState {
+  yard_id: string;
+  label: string;
+  hive_type: string;
+  frames: string;
+  status: HiveStatus;
+  latitude: string;
+  longitude: string;
+  notes: string;
+}
+
+type LocationSource = "hive" | "yard";
+
+interface HiveLocationDetail {
+  latitude: number;
+  longitude: number;
+  source: LocationSource;
+}
 
 type TabType = "overview" | "inspections" | "queen" | "tasks" | "treatments";
+
+const STATUS_OPTIONS: HiveStatus[] = ["Active", "Split", "Deadout"];
+
+const parseCoordinate = (value: string) => {
+  if (!value.trim()) {
+    return undefined;
+  }
+
+  const parsed = Number.parseFloat(value);
+  if (Number.isNaN(parsed)) {
+    return null;
+  }
+
+  return parsed;
+};
 
 export default function HiveDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { hives, yards, queens, inspections, tasks, treatments, updateHive, deleteHive, addQueen, updateQueen, addTreatment, deleteTreatment } = useBeeMindStore();
+  const {
+    hives,
+    yards,
+    queens,
+    inspections,
+    tasks,
+    treatments,
+    updateHive,
+    deleteHive,
+    addQueen,
+    updateQueen,
+    addTreatment,
+    deleteTreatment,
+  } = useBeeMindStore();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [queenModalVisible, setQueenModalVisible] = useState<boolean>(false);
   const [treatmentModalVisible, setTreatmentModalVisible] = useState<boolean>(false);
+  const [editModalVisible, setEditModalVisible] = useState<boolean>(false);
   const [queenFormData, setQueenFormData] = useState({
     hatch_date: "",
     origin: "",
@@ -31,6 +103,16 @@ export default function HiveDetailScreen() {
     end_date: "",
     notes: "",
   });
+  const [editForm, setEditForm] = useState<HiveEditFormState>({
+    yard_id: "",
+    label: "",
+    hive_type: "",
+    frames: "",
+    status: "Active",
+    latitude: "",
+    longitude: "",
+    notes: "",
+  });
 
   const hive = hives.find((h) => h.id === id);
   const yard = hive ? yards.find((y) => y.id === hive.yard_id) : undefined;
@@ -38,6 +120,45 @@ export default function HiveDetailScreen() {
   const hiveInspections = inspections.filter((i) => i.hive_id === id);
   const hiveTasks = tasks.filter((t) => t.hive_id === id);
   const hiveTreatments = treatments.filter((t) => t.hive_id === id);
+
+  const location = useMemo<HiveLocationDetail | null>(() => {
+    if (!hive) {
+      return null;
+    }
+
+    if (typeof hive.latitude === "number" && typeof hive.longitude === "number") {
+      return {
+        latitude: hive.latitude,
+        longitude: hive.longitude,
+        source: "hive",
+      };
+    }
+
+    if (yard && typeof yard.latitude === "number" && typeof yard.longitude === "number") {
+      return {
+        latitude: yard.latitude,
+        longitude: yard.longitude,
+        source: "yard",
+      };
+    }
+
+    return null;
+  }, [hive, yard]);
+
+  useEffect(() => {
+    if (hive && editModalVisible) {
+      setEditForm({
+        yard_id: hive.yard_id,
+        label: hive.label,
+        hive_type: hive.hive_type,
+        frames: hive.frames.toString(),
+        status: hive.status,
+        latitude: hive.latitude !== undefined ? hive.latitude.toString() : "",
+        longitude: hive.longitude !== undefined ? hive.longitude.toString() : "",
+        notes: hive.notes ?? "",
+      });
+    }
+  }, [editModalVisible, hive]);
 
   if (!hive) {
     return (
@@ -57,12 +178,60 @@ export default function HiveDetailScreen() {
           text: "Delete",
           style: "destructive",
           onPress: () => {
+            console.log("[HiveDetail] deleting hive", { hiveId: id });
             deleteHive(id);
             router.back();
           },
         },
-      ]
+      ],
     );
+  };
+
+  const handleUpdateHive = () => {
+    console.log("[HiveDetail] updating hive", { hiveId: id, editForm });
+
+    if (!editForm.label.trim()) {
+      Alert.alert("Error", "Hive label is required");
+      return;
+    }
+
+    if (!editForm.yard_id) {
+      Alert.alert("Error", "Please select a yard");
+      return;
+    }
+
+    const framesValue = Number.parseInt(editForm.frames, 10);
+    if (Number.isNaN(framesValue) || framesValue <= 0) {
+      Alert.alert("Error", "Please provide a valid number of frames");
+      return;
+    }
+
+    const latitudeValue = parseCoordinate(editForm.latitude);
+    const longitudeValue = parseCoordinate(editForm.longitude);
+
+    if (latitudeValue === null || longitudeValue === null) {
+      Alert.alert("Error", "Latitude and longitude must be valid numbers");
+      return;
+    }
+
+    if ((latitudeValue === undefined) !== (longitudeValue === undefined)) {
+      Alert.alert("Error", "Please provide both latitude and longitude or leave both empty.");
+      return;
+    }
+
+    updateHive(id, {
+      yard_id: editForm.yard_id,
+      label: editForm.label.trim(),
+      hive_type: editForm.hive_type.trim() || "Langstroth",
+      frames: framesValue,
+      status: editForm.status,
+      latitude: latitudeValue,
+      longitude: longitudeValue,
+      notes: editForm.notes.trim() || undefined,
+    });
+
+    setEditModalVisible(false);
+    Alert.alert("Success", "Hive updated successfully");
   };
 
   const formatDate = (dateStr: string) => {
@@ -84,119 +253,170 @@ export default function HiveDetailScreen() {
   };
 
   const openInMaps = () => {
-    if (!yard || !yard.latitude || !yard.longitude) return;
+    if (!location) {
+      Alert.alert("Location unavailable", "Add coordinates in the edit panel to enable navigation.");
+      return;
+    }
 
     const scheme = Platform.select({
       ios: "maps:0,0?q=",
       android: "geo:0,0?q=",
       default: "https://www.google.com/maps/search/?api=1&query=",
     });
-    const latLng = `${yard.latitude},${yard.longitude}`;
+    const latLng = `${location.latitude},${location.longitude}`;
     const url = Platform.select({
       ios: `${scheme}${hive.label}@${latLng}`,
       android: `${scheme}${latLng}(${hive.label})`,
       default: `${scheme}${latLng}`,
     });
+
+    console.log("[HiveDetail] open external maps", { hiveId: hive.id, latLng, source: location.source, url });
     Linking.openURL(url);
   };
 
   const renderOverview = () => {
     return (
-    <View>
-      {yard && yard.latitude && yard.longitude && (
-        <View style={styles.mapContainer}>
-          {Platform.OS === 'web' ? (
-            <TouchableOpacity
-              style={styles.webMapFallback}
-              onPress={openInMaps}
-              activeOpacity={0.8}
-            >
-              <MapPin size={48} color={Colors.light.primary} />
-              <Text style={styles.webMapText}>{hive.label}</Text>
-              <Text style={styles.webMapCoords}>
-                {yard.latitude.toFixed(4)}, {yard.longitude.toFixed(4)}
-              </Text>
-              <View style={styles.webMapButton}>
-                <Text style={styles.webMapButtonText}>View on Google Maps</Text>
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <>
-              <MapViewComponent
-                latitude={yard.latitude}
-                longitude={yard.longitude}
-                label={hive.label}
-                description={yard.name}
-              />
+      <View>
+        {location ? (
+          <View style={styles.mapContainer}>
+            {Platform.OS === "web" ? (
               <TouchableOpacity
-                style={styles.mapOverlay}
+                style={styles.webMapFallback}
                 onPress={openInMaps}
-                activeOpacity={0.85}
-                testID="hive-map-open-external"
+                activeOpacity={0.8}
+                testID="hive-location-open-web"
               >
-                <MapPin size={18} color="#0F172A" />
-                <Text style={styles.mapOverlayText}>Open in Maps</Text>
+                <MapPin size={48} color={Colors.light.primary} />
+                <Text style={styles.webMapText}>{hive.label}</Text>
+                <Text style={styles.webMapCoords}>
+                  {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                </Text>
+                <View style={styles.locationChip}>
+                  <MapPinned size={14} color={Colors.light.primary} />
+                  <Text style={styles.locationChipText}>
+                    {location.source === "hive" ? "Hive-specific" : "Yard location"}
+                  </Text>
+                </View>
+                <View style={styles.webMapButton}>
+                  <Text style={styles.webMapButtonText}>View on Google Maps</Text>
+                </View>
               </TouchableOpacity>
-            </>
-          )}
-        </View>
-      )}
-
-      <View style={styles.infoCard}>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Yard</Text>
-          <Text style={styles.infoValue}>{yard?.name || "Unknown"}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Type</Text>
-          <Text style={styles.infoValue}>{hive.hive_type}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Frames</Text>
-          <Text style={styles.infoValue}>{hive.frames}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Status</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor() + "20" }]}>
-            <Text style={[styles.statusText, { color: getStatusColor() }]}>{hive.status}</Text>
+            ) : (
+              <>
+                <MapViewComponent
+                  latitude={location.latitude}
+                  longitude={location.longitude}
+                  label={hive.label}
+                  description={yard?.name ?? "Hive location"}
+                />
+                <TouchableOpacity
+                  style={styles.mapOverlay}
+                  onPress={openInMaps}
+                  activeOpacity={0.85}
+                  testID="hive-map-open-external"
+                >
+                  <MapPin size={18} color="#0F172A" />
+                  <Text style={styles.mapOverlayText}>Open in Maps</Text>
+                </TouchableOpacity>
+                <View style={styles.locationBadge}>
+                  <MapPinned size={14} color={Colors.light.primary} />
+                  <Text style={styles.locationBadgeText}>
+                    {location.source === "hive" ? "Hive precision" : "Using yard coordinates"}
+                  </Text>
+                </View>
+              </>
+            )}
           </View>
-        </View>
-      </View>
+        ) : (
+          <View style={styles.locationEmptyState}>
+            <MapPin size={38} color={Colors.light.tabIconDefault} />
+            <Text style={styles.locationEmptyTitle}>No coordinates yet</Text>
+            <Text style={styles.locationEmptySubtitle}>
+              Add latitude and longitude to unlock navigation, map previews, and field routing.
+            </Text>
+            <TouchableOpacity
+              style={styles.locationAction}
+              onPress={() => setEditModalVisible(true)}
+              activeOpacity={0.85}
+              testID="add-location-from-overview"
+            >
+              <Text style={styles.locationActionText}>Add location</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-      <View style={styles.statsGrid}>
-        <View style={styles.statCard}>
-          <Calendar size={24} color={Colors.light.primary} />
-          <Text style={styles.statValue}>{hiveInspections.length}</Text>
-          <Text style={styles.statLabel}>Inspections</Text>
-        </View>
-        <View style={styles.statCard}>
-          <CheckSquare size={24} color={Colors.light.primary} />
-          <Text style={styles.statValue}>{hiveTasks.filter((t) => !t.is_done).length}</Text>
-          <Text style={styles.statLabel}>Pending Tasks</Text>
-        </View>
-      </View>
-
-      {queen && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Active Queen</Text>
-          <View style={styles.queenCard}>
-            <Crown size={24} color={Colors.light.primary} />
-            <View style={styles.queenInfo}>
-              {queen.mark_color && (
-                <Text style={styles.queenText}>Mark: {queen.mark_color}</Text>
-              )}
-              {queen.hatch_date && (
-                <Text style={styles.queenText}>Hatched: {formatDate(queen.hatch_date)}</Text>
-              )}
-              {queen.origin && <Text style={styles.queenText}>Origin: {queen.origin}</Text>}
-              {queen.temperament && (
-                <Text style={styles.queenText}>Temperament: {queen.temperament}/5</Text>
-              )}
+        <View style={styles.infoCard}>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Yard</Text>
+            <Text style={styles.infoValue}>{yard?.name || "Unknown"}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Type</Text>
+            <Text style={styles.infoValue}>{hive.hive_type}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Frames</Text>
+            <Text style={styles.infoValue}>{hive.frames}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Status</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor() + "20" }]}>
+              <Text style={[styles.statusText, { color: getStatusColor() }]}>{hive.status}</Text>
             </View>
           </View>
+          {location && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Coordinates</Text>
+              <TouchableOpacity onPress={openInMaps} activeOpacity={0.7}>
+                <Text style={styles.infoLink}>
+                  {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
-      )}
-    </View>
+
+        {hive.notes ? (
+          <View style={styles.notesCard}>
+            <Text style={styles.sectionTitle}>Field Notes</Text>
+            <Text style={styles.notesText}>{hive.notes}</Text>
+          </View>
+        ) : null}
+
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <Calendar size={24} color={Colors.light.primary} />
+            <Text style={styles.statValue}>{hiveInspections.length}</Text>
+            <Text style={styles.statLabel}>Inspections</Text>
+          </View>
+          <View style={styles.statCard}>
+            <CheckSquare size={24} color={Colors.light.primary} />
+            <Text style={styles.statValue}>{hiveTasks.filter((t) => !t.is_done).length}</Text>
+            <Text style={styles.statLabel}>Pending Tasks</Text>
+          </View>
+        </View>
+
+        {queen && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Active Queen</Text>
+            <View style={styles.queenCard}>
+              <Crown size={24} color={Colors.light.primary} />
+              <View style={styles.queenInfo}>
+                {queen.mark_color && (
+                  <Text style={styles.queenText}>Mark: {queen.mark_color}</Text>
+                )}
+                {queen.hatch_date && (
+                  <Text style={styles.queenText}>Hatched: {formatDate(queen.hatch_date)}</Text>
+                )}
+                {queen.origin && <Text style={styles.queenText}>Origin: {queen.origin}</Text>}
+                {queen.temperament && (
+                  <Text style={styles.queenText}>Temperament: {queen.temperament}/5</Text>
+                )}
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
     );
   };
 
@@ -250,7 +470,7 @@ export default function HiveDetailScreen() {
       )}
       <TouchableOpacity
         style={styles.addButton}
-        onPress={() => router.push(`/inspection/new?hive=${id}` as any)}
+        onPress={() => router.push(`/inspection/new?hive=${id}` as const)}
       >
         <Plus size={20} color="#FFFFFF" />
         <Text style={styles.addButtonText}>Add Inspection</Text>
@@ -269,7 +489,7 @@ export default function HiveDetailScreen() {
       hatch_date: queenFormData.hatch_date || undefined,
       origin: queenFormData.origin || undefined,
       mark_color: queenFormData.mark_color || undefined,
-      temperament: queenFormData.temperament ? parseInt(queenFormData.temperament) : undefined,
+      temperament: queenFormData.temperament ? Number.parseInt(queenFormData.temperament, 10) : undefined,
       notes: queenFormData.notes || undefined,
       status: "Active",
     });
@@ -292,7 +512,7 @@ export default function HiveDetailScreen() {
             Alert.alert("Success", "Queen marked as superseded");
           },
         },
-      ]
+      ],
     );
   };
 
@@ -444,7 +664,7 @@ export default function HiveDetailScreen() {
             Alert.alert("Success", "Treatment deleted");
           },
         },
-      ]
+      ],
     );
   };
 
@@ -494,7 +714,7 @@ export default function HiveDetailScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}> 
       <View style={styles.header}>
         <View style={styles.headerIcon}>
           <Hexagon size={32} color={Colors.light.primary} />
@@ -506,11 +726,19 @@ export default function HiveDetailScreen() {
       </View>
 
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert("Edit", "Edit functionality coming soon")}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => setEditModalVisible(true)}
+          testID="edit-hive-button"
+        >
           <Edit size={20} color={Colors.light.primary} />
           <Text style={styles.actionButtonText}>Edit</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionButton, styles.actionButtonDanger]} onPress={handleDelete}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.actionButtonDanger]}
+          onPress={handleDelete}
+          testID="delete-hive-button"
+        >
           <Trash2 size={20} color={Colors.light.error} />
           <Text style={[styles.actionButtonText, styles.actionButtonTextDanger]}>Delete</Text>
         </TouchableOpacity>
@@ -522,6 +750,7 @@ export default function HiveDetailScreen() {
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
             onPress={() => setActiveTab(tab)}
+            testID={`hive-tab-${tab}`}
           >
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -537,6 +766,149 @@ export default function HiveDetailScreen() {
         {activeTab === "tasks" && renderTasks()}
         {activeTab === "treatments" && renderTreatments()}
       </ScrollView>
+
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Hive</Text>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                <X size={24} color={Colors.light.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.form} keyboardShouldPersistTaps="handled">
+              <Text style={styles.label}>Label *</Text>
+              <TextInput
+                style={styles.input}
+                value={editForm.label}
+                onChangeText={(text) => setEditForm((prev) => ({ ...prev, label: text }))}
+                placeholder="Hive label"
+                placeholderTextColor={Colors.light.tabIconDefault}
+                testID="edit-hive-label"
+              />
+
+              <Text style={styles.label}>Yard *</Text>
+              <View style={styles.pickerGroup}>
+                {yards.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[styles.pill, editForm.yard_id === item.id && styles.pillActive]}
+                    onPress={() => setEditForm((prev) => ({ ...prev, yard_id: item.id }))}
+                    testID={`edit-hive-yard-${item.id}`}
+                  >
+                    <Text style={[styles.pillText, editForm.yard_id === item.id && styles.pillTextActive]}>
+                      {item.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.label}>Hive Type</Text>
+              <TextInput
+                style={styles.input}
+                value={editForm.hive_type}
+                onChangeText={(text) => setEditForm((prev) => ({ ...prev, hive_type: text }))}
+                placeholder="Langstroth"
+                placeholderTextColor={Colors.light.tabIconDefault}
+                testID="edit-hive-type"
+              />
+
+              <Text style={styles.label}>Number of Frames</Text>
+              <TextInput
+                style={styles.input}
+                value={editForm.frames}
+                onChangeText={(text) => setEditForm((prev) => ({ ...prev, frames: text }))}
+                placeholder="10"
+                placeholderTextColor={Colors.light.tabIconDefault}
+                keyboardType="number-pad"
+                testID="edit-hive-frames"
+              />
+
+              <Text style={styles.label}>Status</Text>
+              <View style={styles.statusGroup}>
+                {STATUS_OPTIONS.map((status) => (
+                  <TouchableOpacity
+                    key={status}
+                    style={[styles.statusChip, editForm.status === status && styles.statusChipActive]}
+                    onPress={() => setEditForm((prev) => ({ ...prev, status }))}
+                    testID={`edit-hive-status-${status}`}
+                  >
+                    <Text
+                      style={[styles.statusChipText, editForm.status === status && styles.statusChipTextActive]}
+                    >
+                      {status}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.label}>Coordinates</Text>
+              <View style={styles.coordinatesRow}>
+                <View style={styles.coordinateField}>
+                  <Text style={styles.helperLabel}>Latitude</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.latitude}
+                    onChangeText={(text) => setEditForm((prev) => ({ ...prev, latitude: text }))}
+                    placeholder="40.7128"
+                    placeholderTextColor={Colors.light.tabIconDefault}
+                    keyboardType="decimal-pad"
+                    testID="edit-hive-latitude"
+                  />
+                </View>
+                <View style={styles.coordinateField}>
+                  <Text style={styles.helperLabel}>Longitude</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.longitude}
+                    onChangeText={(text) => setEditForm((prev) => ({ ...prev, longitude: text }))}
+                    placeholder="-73.9352"
+                    placeholderTextColor={Colors.light.tabIconDefault}
+                    keyboardType="decimal-pad"
+                    testID="edit-hive-longitude"
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.label}>Notes</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={editForm.notes}
+                onChangeText={(text) => setEditForm((prev) => ({ ...prev, notes: text }))}
+                placeholder="Microclimate, access info, seasonal reminders..."
+                placeholderTextColor={Colors.light.tabIconDefault}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                testID="edit-hive-notes"
+              />
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonSecondary]}
+                onPress={() => setEditModalVisible(false)}
+                testID="cancel-hive-edit"
+              >
+                <Text style={styles.buttonSecondaryText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonPrimary]}
+                onPress={handleUpdateHive}
+                testID="confirm-hive-edit"
+              >
+                <Text style={styles.buttonPrimaryText}>Save Changes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={queenModalVisible}
@@ -558,7 +930,7 @@ export default function HiveDetailScreen() {
               <TextInput
                 style={styles.input}
                 value={queenFormData.hatch_date}
-                onChangeText={(text) => setQueenFormData({ ...queenFormData, hatch_date: text })}
+                onChangeText={(text) => setQueenFormData((prev) => ({ ...prev, hatch_date: text }))}
                 placeholder="e.g., 2024-04-15"
                 placeholderTextColor={Colors.light.tabIconDefault}
               />
@@ -567,7 +939,7 @@ export default function HiveDetailScreen() {
               <TextInput
                 style={styles.input}
                 value={queenFormData.origin}
-                onChangeText={(text) => setQueenFormData({ ...queenFormData, origin: text })}
+                onChangeText={(text) => setQueenFormData((prev) => ({ ...prev, origin: text }))}
                 placeholder="e.g., Local Breeder"
                 placeholderTextColor={Colors.light.tabIconDefault}
               />
@@ -577,17 +949,11 @@ export default function HiveDetailScreen() {
                 {["White", "Yellow", "Red", "Green", "Blue"].map((color) => (
                   <TouchableOpacity
                     key={color}
-                    style={[
-                      styles.colorButton,
-                      queenFormData.mark_color === color && styles.colorButtonActive,
-                    ]}
-                    onPress={() => setQueenFormData({ ...queenFormData, mark_color: color })}
+                    style={[styles.colorButton, queenFormData.mark_color === color && styles.colorButtonActive]}
+                    onPress={() => setQueenFormData((prev) => ({ ...prev, mark_color: color }))}
                   >
                     <Text
-                      style={[
-                        styles.colorButtonText,
-                        queenFormData.mark_color === color && styles.colorButtonTextActive,
-                      ]}
+                      style={[styles.colorButtonText, queenFormData.mark_color === color && styles.colorButtonTextActive]}
                     >
                       {color}
                     </Text>
@@ -600,17 +966,11 @@ export default function HiveDetailScreen() {
                 {[1, 2, 3, 4, 5].map((rating) => (
                   <TouchableOpacity
                     key={rating}
-                    style={[
-                      styles.ratingButton,
-                      queenFormData.temperament === rating.toString() && styles.ratingButtonActive,
-                    ]}
-                    onPress={() => setQueenFormData({ ...queenFormData, temperament: rating.toString() })}
+                    style={[styles.ratingButton, queenFormData.temperament === rating.toString() && styles.ratingButtonActive]}
+                    onPress={() => setQueenFormData((prev) => ({ ...prev, temperament: rating.toString() }))}
                   >
                     <Text
-                      style={[
-                        styles.ratingButtonText,
-                        queenFormData.temperament === rating.toString() && styles.ratingButtonTextActive,
-                      ]}
+                      style={[styles.ratingButtonText, queenFormData.temperament === rating.toString() && styles.ratingButtonTextActive]}
                     >
                       {rating}
                     </Text>
@@ -622,11 +982,12 @@ export default function HiveDetailScreen() {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={queenFormData.notes}
-                onChangeText={(text) => setQueenFormData({ ...queenFormData, notes: text })}
+                onChangeText={(text) => setQueenFormData((prev) => ({ ...prev, notes: text }))}
                 placeholder="Additional notes..."
                 placeholderTextColor={Colors.light.tabIconDefault}
                 multiline
                 numberOfLines={4}
+                textAlignVertical="top"
               />
             </ScrollView>
 
@@ -665,7 +1026,7 @@ export default function HiveDetailScreen() {
               <TextInput
                 style={styles.input}
                 value={treatmentFormData.product}
-                onChangeText={(text) => setTreatmentFormData({ ...treatmentFormData, product: text })}
+                onChangeText={(text) => setTreatmentFormData((prev) => ({ ...prev, product: text }))}
                 placeholder="e.g., Apivar"
                 placeholderTextColor={Colors.light.tabIconDefault}
               />
@@ -674,7 +1035,7 @@ export default function HiveDetailScreen() {
               <TextInput
                 style={styles.input}
                 value={treatmentFormData.dose}
-                onChangeText={(text) => setTreatmentFormData({ ...treatmentFormData, dose: text })}
+                onChangeText={(text) => setTreatmentFormData((prev) => ({ ...prev, dose: text }))}
                 placeholder="e.g., 2 strips"
                 placeholderTextColor={Colors.light.tabIconDefault}
               />
@@ -683,7 +1044,7 @@ export default function HiveDetailScreen() {
               <TextInput
                 style={styles.input}
                 value={treatmentFormData.start_date}
-                onChangeText={(text) => setTreatmentFormData({ ...treatmentFormData, start_date: text })}
+                onChangeText={(text) => setTreatmentFormData((prev) => ({ ...prev, start_date: text }))}
                 placeholder="e.g., 2025-01-15"
                 placeholderTextColor={Colors.light.tabIconDefault}
               />
@@ -692,7 +1053,7 @@ export default function HiveDetailScreen() {
               <TextInput
                 style={styles.input}
                 value={treatmentFormData.end_date}
-                onChangeText={(text) => setTreatmentFormData({ ...treatmentFormData, end_date: text })}
+                onChangeText={(text) => setTreatmentFormData((prev) => ({ ...prev, end_date: text }))}
                 placeholder="e.g., 2025-02-15"
                 placeholderTextColor={Colors.light.tabIconDefault}
               />
@@ -701,11 +1062,12 @@ export default function HiveDetailScreen() {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={treatmentFormData.notes}
-                onChangeText={(text) => setTreatmentFormData({ ...treatmentFormData, notes: text })}
+                onChangeText={(text) => setTreatmentFormData((prev) => ({ ...prev, notes: text }))}
                 placeholder="Additional notes..."
                 placeholderTextColor={Colors.light.tabIconDefault}
                 multiline
                 numberOfLines={4}
+                textAlignVertical="top"
               />
             </ScrollView>
 
@@ -827,6 +1189,156 @@ const styles = StyleSheet.create({
   tabContentInner: {
     padding: 16,
   },
+  mapContainer: {
+    height: 220,
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 16,
+    position: "relative",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  mapOverlay: {
+    position: "absolute",
+    top: 14,
+    right: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FACC15",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 6,
+      },
+      default: {
+        shadowColor: "rgba(15, 23, 42, 0.24)",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.22,
+        shadowRadius: 12,
+      },
+    }),
+  },
+  mapOverlayText: {
+    color: "#0F172A",
+    fontSize: 13,
+    fontWeight: "700" as const,
+    letterSpacing: 0.2,
+    textTransform: "uppercase",
+  },
+  locationBadge: {
+    position: "absolute",
+    left: 16,
+    bottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: Colors.light.card + "E6",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+  },
+  locationBadgeText: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: Colors.light.tabIconDefault,
+  },
+  webMapFallback: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 12,
+  },
+  webMapText: {
+    fontSize: 16,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
+    marginTop: 12,
+  },
+  webMapCoords: {
+    fontSize: 14,
+    color: Colors.light.tabIconDefault,
+  },
+  locationChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: Colors.light.card,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  locationChipText: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: Colors.light.tabIconDefault,
+  },
+  webMapButton: {
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  webMapButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600" as const,
+  },
+  locationEmptyState: {
+    backgroundColor: Colors.light.card,
+    borderRadius: 12,
+    padding: 20,
+    gap: 12,
+    alignItems: "center",
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  locationEmptyTitle: {
+    fontSize: 18,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
+  },
+  locationEmptySubtitle: {
+    fontSize: 14,
+    color: Colors.light.tabIconDefault,
+    textAlign: "center",
+  },
+  locationAction: {
+    marginTop: 4,
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  locationActionText: {
+    color: "#0F172A",
+    fontSize: 14,
+    fontWeight: "700" as const,
+    letterSpacing: 0.3,
+  },
   infoCard: {
     backgroundColor: Colors.light.card,
     padding: 16,
@@ -861,6 +1373,11 @@ const styles = StyleSheet.create({
     fontWeight: "500" as const,
     color: Colors.light.text,
   },
+  infoLink: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: Colors.light.primary,
+  },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -869,6 +1386,19 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: "600" as const,
+  },
+  notesCard: {
+    backgroundColor: Colors.light.card,
+    padding: 18,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  notesText: {
+    fontSize: 15,
+    color: Colors.light.text,
+    lineHeight: 22,
   },
   statsGrid: {
     flexDirection: "row",
@@ -1145,6 +1675,40 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginBottom: 8,
   },
+  helperLabel: {
+    fontSize: 12,
+    fontWeight: "500" as const,
+    color: Colors.light.tabIconDefault,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  pickerGroup: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+  },
+  pill: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: Colors.light.background,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  pillActive: {
+    backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primary,
+  },
+  pillText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: Colors.light.tabIconDefault,
+  },
+  pillTextActive: {
+    color: "#1F2937",
+  },
   input: {
     backgroundColor: Colors.light.background,
     borderRadius: 8,
@@ -1156,8 +1720,73 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.border,
   },
   textArea: {
-    height: 100,
+    height: 110,
     textAlignVertical: "top",
+  },
+  statusGroup: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  statusChip: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: Colors.light.background,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  statusChipActive: {
+    backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primary,
+  },
+  statusChipText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: Colors.light.tabIconDefault,
+  },
+  statusChipTextActive: {
+    color: "#FFFFFF",
+  },
+  coordinatesRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  coordinateField: {
+    flex: 1,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: Colors.light.border,
+  },
+  button: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  buttonPrimary: {
+    backgroundColor: Colors.light.primary,
+  },
+  buttonSecondary: {
+    backgroundColor: Colors.light.background,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  buttonPrimaryText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600" as const,
+  },
+  buttonSecondaryText: {
+    color: Colors.light.text,
+    fontSize: 16,
+    fontWeight: "600" as const,
   },
   colorGroup: {
     flexDirection: "row",
@@ -1211,37 +1840,6 @@ const styles = StyleSheet.create({
   ratingButtonTextActive: {
     color: "#FFFFFF",
   },
-  modalActions: {
-    flexDirection: "row",
-    gap: 12,
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-  },
-  button: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  buttonPrimary: {
-    backgroundColor: Colors.light.primary,
-  },
-  buttonSecondary: {
-    backgroundColor: Colors.light.background,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  buttonPrimaryText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600" as const,
-  },
-  buttonSecondaryText: {
-    color: Colors.light.text,
-    fontSize: 16,
-    fontWeight: "600" as const,
-  },
   treatmentCard: {
     backgroundColor: Colors.light.card,
     padding: 16,
@@ -1288,92 +1886,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.tabIconDefault,
     fontStyle: "italic",
-  },
-  mapContainer: {
-    height: 200,
-    borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 16,
-    position: "relative",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  map: {
-    flex: 1,
-  },
-  mapOverlay: {
-    position: "absolute",
-    top: 14,
-    right: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#FACC15",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 10,
-      },
-      android: {
-        elevation: 6,
-      },
-      default: {
-        shadowColor: "rgba(15, 23, 42, 0.24)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.22,
-        shadowRadius: 12,
-      },
-    }),
-  },
-  mapOverlayText: {
-    color: "#0F172A",
-    fontSize: 13,
-    fontWeight: "700" as const,
-    letterSpacing: 0.2,
-    textTransform: "uppercase",
-  },
-  webMapFallback: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: 12,
-  },
-  webMapText: {
-    fontSize: 16,
-    fontWeight: "600" as const,
-    color: Colors.light.text,
-    marginTop: 12,
-  },
-  webMapCoords: {
-    fontSize: 14,
-    color: Colors.light.tabIconDefault,
-  },
-  webMapButton: {
-    backgroundColor: Colors.light.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  webMapButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600" as const,
   },
 });

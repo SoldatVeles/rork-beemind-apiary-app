@@ -23,6 +23,9 @@ export interface Hive {
   hive_type: string;
   frames: number;
   status: HiveStatus;
+  latitude?: number;
+  longitude?: number;
+  notes?: string;
   qr_code?: string;
   created_at: string;
 }

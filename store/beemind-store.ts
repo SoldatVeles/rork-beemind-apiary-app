@@ -302,9 +302,9 @@ export const useBeeMindStore = create<BeeMindState>()(
           const yard1 = { id: "yard-1", name: "North Field", address: "Valenzuela", created_at: now };
           const yard2 = { id: "yard-2", name: "River Yard", address: "Bern", latitude: 46.948, longitude: 7.447, created_at: now };
 
-          const hive1 = { id: "hive-1", yard_id: "yard-1", label: "Hive 1", hive_type: "Langstroth", frames: 10, status: "Active" as const, created_at: now };
+          const hive1 = { id: "hive-1", yard_id: "yard-1", label: "Hive 1", hive_type: "Langstroth", frames: 10, status: "Active" as const, latitude: 40.7128, longitude: -74.006, created_at: now };
           const hive2 = { id: "hive-2", yard_id: "yard-1", label: "Hive 2", hive_type: "Langstroth", frames: 10, status: "Active" as const, created_at: now };
-          const hive3 = { id: "hive-3", yard_id: "yard-2", label: "Hive 3", hive_type: "Langstroth", frames: 8, status: "Active" as const, created_at: now };
+          const hive3 = { id: "hive-3", yard_id: "yard-2", label: "River Queen", hive_type: "Langstroth", frames: 8, status: "Active" as const, latitude: 46.948, longitude: 7.447, created_at: now };
 
           const queen1 = { id: "queen-1", hive_id: "hive-1", hatch_date: "2024-04-15", origin: "Local Breeder", mark_color: "Blue", temperament: 4, status: "Active" as const, created_at: now };
           const queen2 = { id: "queen-2", hive_id: "hive-2", hatch_date: "2024-05-20", origin: "Italian Stock", mark_color: "Yellow", temperament: 5, status: "Active" as const, created_at: now };

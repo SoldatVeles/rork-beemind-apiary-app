@@ -1,36 +1,97 @@
-import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, TextInput, Modal, Alert, Linking } from "react-native";
-import { Hexagon, Plus, Search, X, Map as MapIcon } from "lucide-react-native";
+import { useCallback, useMemo, useState } from "react";
+import {
+  Alert,
+  Linking,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Hexagon, Map as MapIcon, Plus, Search, X } from "lucide-react-native";
 import { useRouter } from "expo-router";
-import Colors from "@/constants/colors";
-import { useBeeMindStore } from "@/store/beemind-store";
-import type { HiveStatus } from "@/types";
+import Colors from "../../../constants/colors";
+import { useBeeMindStore } from "../../../store/beemind-store";
+import type { Hive, HiveStatus } from "../../../types";
+
+interface HiveFormState {
+  yard_id: string;
+  label: string;
+  hive_type: string;
+  frames: string;
+  status: HiveStatus;
+  latitude: string;
+  longitude: string;
+  notes: string;
+}
+
+interface HiveLocation {
+  latitude: number;
+  longitude: number;
+  source: "hive" | "yard";
+}
 
 export default function HivesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { hives, yards, addHive } = useBeeMindStore();
   const [search, setSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<HiveStatus | "All">("All");
   const [modalVisible, setModalVisible] = useState<boolean>(false);
-  const [formData, setFormData] = useState({
+  const [mapModalVisible, setMapModalVisible] = useState<boolean>(false);
+  const [formData, setFormData] = useState<HiveFormState>({
     yard_id: "",
     label: "",
     hive_type: "Langstroth",
     frames: "10",
+    status: "Active",
+    latitude: "",
+    longitude: "",
+    notes: "",
   });
 
-  const filteredHives = hives.filter((hive) => {
-    const matchesSearch = hive.label.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "All" || hive.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const getHiveLocation = useCallback(
+    (hive: Hive): HiveLocation | null => {
+      if (typeof hive.latitude === "number" && typeof hive.longitude === "number") {
+        return {
+          latitude: hive.latitude,
+          longitude: hive.longitude,
+          source: "hive",
+        };
+      }
 
-  const hivesWithLocation = hives.filter((hive) => {
-    const yard = yards.find((y) => y.id === hive.yard_id);
-    return yard && yard.latitude && yard.longitude;
-  });
+      const yard = yards.find((y) => y.id === hive.yard_id);
+
+      if (yard && typeof yard.latitude === "number" && typeof yard.longitude === "number") {
+        return {
+          latitude: yard.latitude,
+          longitude: yard.longitude,
+          source: "yard",
+        };
+      }
+
+      return null;
+    },
+    [yards],
+  );
+
+  const filteredHives = useMemo(() => {
+    return hives.filter((hive) => {
+      const matchesSearch = hive.label.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === "All" || hive.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [hives, search, statusFilter]);
+
+  const hivesWithLocation = useMemo(() => {
+    return hives.filter((hive) => getHiveLocation(hive) !== null);
+  }, [getHiveLocation, hives]);
+
   const hasHivesWithLocation = hivesWithLocation.length > 0;
-  const [mapModalVisible, setMapModalVisible] = useState<boolean>(false);
 
   const getYardName = (yardId: string) => {
     return yards.find((y) => y.id === yardId)?.name || "Unknown Yard";
@@ -49,53 +110,109 @@ export default function HivesScreen() {
     }
   };
 
-  const openHiveInMaps = (hive: typeof hives[0]) => {
-    const yard = yards.find((y) => y.id === hive.yard_id);
-    if (!yard || !yard.latitude || !yard.longitude) return;
+  const openHiveInMaps = (hive: Hive) => {
+    const location = getHiveLocation(hive);
+
+    if (!location) {
+      Alert.alert("Location unavailable", "Please add latitude and longitude to this hive or its yard first.");
+      return;
+    }
 
     const scheme = Platform.select({
       ios: "maps:0,0?q=",
       android: "geo:0,0?q=",
       default: "https://www.google.com/maps/search/?api=1&query=",
     });
-    const latLng = `${yard.latitude},${yard.longitude}`;
+
+    const latLng = `${location.latitude},${location.longitude}`;
     const url = Platform.select({
       ios: `${scheme}${hive.label}@${latLng}`,
       android: `${scheme}${latLng}(${hive.label})`,
       default: `${scheme}${latLng}`,
     });
+
+    console.log("[HivesScreen] opening maps", { hiveId: hive.id, latLng, source: location.source, url });
     Linking.openURL(url);
   };
 
+  const parseCoordinate = (value: string) => {
+    if (!value.trim()) {
+      return undefined;
+    }
+
+    const parsed = Number.parseFloat(value);
+    if (Number.isNaN(parsed)) {
+      return null;
+    }
+
+    return parsed;
+  };
+
   const handleSubmit = () => {
+    console.log("[HivesScreen] submit new hive", formData);
+
     if (!formData.label.trim()) {
       Alert.alert("Error", "Hive label is required");
       return;
     }
+
     if (!formData.yard_id) {
       Alert.alert("Error", "Please select a yard");
       return;
     }
 
+    const latitudeValue = parseCoordinate(formData.latitude);
+    const longitudeValue = parseCoordinate(formData.longitude);
+
+    if (latitudeValue === null || longitudeValue === null) {
+      Alert.alert("Error", "Latitude and longitude must be valid numbers");
+      return;
+    }
+
+    if ((latitudeValue === undefined) !== (longitudeValue === undefined)) {
+      Alert.alert("Error", "Please provide both latitude and longitude or leave both empty.");
+      return;
+    }
+
+    const framesValue = Number.parseInt(formData.frames, 10);
+
+    if (Number.isNaN(framesValue) || framesValue <= 0) {
+      Alert.alert("Error", "Please provide a valid number of frames");
+      return;
+    }
+
     addHive({
       yard_id: formData.yard_id,
-      label: formData.label,
-      hive_type: formData.hive_type,
-      frames: parseInt(formData.frames) || 10,
-      status: "Active",
+      label: formData.label.trim(),
+      hive_type: formData.hive_type.trim() || "Langstroth",
+      frames: framesValue,
+      status: formData.status,
+      latitude: latitudeValue,
+      longitude: longitudeValue,
+      notes: formData.notes.trim() || undefined,
     });
 
-    setFormData({ yard_id: "", label: "", hive_type: "Langstroth", frames: "10" });
+    setFormData({
+      yard_id: "",
+      label: "",
+      hive_type: "Langstroth",
+      frames: "10",
+      status: "Active",
+      latitude: "",
+      longitude: "",
+      notes: "",
+    });
     setModalVisible(false);
     Alert.alert("Success", "Hive created successfully");
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}> 
       {hasHivesWithLocation && (
         <TouchableOpacity
           style={styles.mapPreviewCard}
           onPress={() => setMapModalVisible(true)}
+          testID="open-map-modal"
         >
           <View style={styles.mapPreviewHeader}>
             <MapIcon size={20} color="#FFFFFF" />
@@ -116,6 +233,7 @@ export default function HivesScreen() {
             placeholderTextColor={Colors.light.tabIconDefault}
             value={search}
             onChangeText={setSearch}
+            testID="hive-search-input"
           />
         </View>
       </View>
@@ -126,6 +244,7 @@ export default function HivesScreen() {
             key={status}
             style={[styles.filterChip, statusFilter === status && styles.filterChipActive]}
             onPress={() => setStatusFilter(status)}
+            testID={`filter-${status}`}
           >
             <Text
               style={[
@@ -149,41 +268,56 @@ export default function HivesScreen() {
             </Text>
           </View>
         ) : (
-          filteredHives.map((hive) => (
-            <TouchableOpacity
-              key={hive.id}
-              style={styles.hiveCard}
-              onPress={() => router.push(`/(tabs)/hives/${hive.id}` as any)}
-            >
-              <View style={styles.hiveHeader}>
-                <View style={styles.hiveIcon}>
-                  <Hexagon size={24} color={Colors.light.primary} />
+          filteredHives.map((hive) => {
+            const location = getHiveLocation(hive);
+            return (
+              <TouchableOpacity
+                key={hive.id}
+                style={styles.hiveCard}
+                onPress={() =>
+                  router.push({ pathname: "/(tabs)/hives/[id]", params: { id: hive.id } })
+                }
+                testID={`hive-card-${hive.id}`}
+              >
+                <View style={styles.hiveHeader}>
+                  <View style={styles.hiveIcon}>
+                    <Hexagon size={24} color={Colors.light.primary} />
+                  </View>
+                  <View style={styles.hiveContent}>
+                    <Text style={styles.hiveLabel}>{hive.label}</Text>
+                    <Text style={styles.hiveYard}>{getYardName(hive.yard_id)}</Text>
+                    {location && (
+                      <Text style={styles.hiveCoords}>
+                        {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                      </Text>
+                    )}
+                  </View>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      { backgroundColor: `${getStatusColor(hive.status)}20` },
+                    ]}
+                  >
+                    <Text style={[styles.statusText, { color: getStatusColor(hive.status) }]}>
+                      {hive.status}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.hiveContent}>
-                  <Text style={styles.hiveLabel}>{hive.label}</Text>
-                  <Text style={styles.hiveYard}>{getYardName(hive.yard_id)}</Text>
+                <View style={styles.hiveDetails}>
+                  <Text style={styles.hiveDetail}>Type: {hive.hive_type}</Text>
+                  <Text style={styles.hiveDetail}>Frames: {hive.frames}</Text>
                 </View>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    { backgroundColor: getStatusColor(hive.status) + "20" },
-                  ]}
-                >
-                  <Text style={[styles.statusText, { color: getStatusColor(hive.status) }]}>
-                    {hive.status}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.hiveDetails}>
-                <Text style={styles.hiveDetail}>Type: {hive.hive_type}</Text>
-                <Text style={styles.hiveDetail}>Frames: {hive.frames}</Text>
-              </View>
-            </TouchableOpacity>
-          ))
+              </TouchableOpacity>
+            );
+          })
         )}
       </ScrollView>
 
-      <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setModalVisible(true)}
+        testID="add-hive-button"
+      >
         <Plus size={24} color="#FFFFFF" />
       </TouchableOpacity>
 
@@ -196,7 +330,7 @@ export default function HivesScreen() {
         <View style={styles.mapModal}>
           <View style={styles.mapModalHeader}>
             <Text style={styles.mapModalTitle}>All Hives</Text>
-            <TouchableOpacity onPress={() => setMapModalVisible(false)}>
+            <TouchableOpacity onPress={() => setMapModalVisible(false)} testID="close-map-modal">
               <X size={24} color={Colors.light.text} />
             </TouchableOpacity>
           </View>
@@ -208,27 +342,34 @@ export default function HivesScreen() {
             <ScrollView style={styles.hivesListInMap}>
               {hivesWithLocation.map((hive) => {
                 const yard = yards.find((y) => y.id === hive.yard_id);
-                if (!yard) return null;
+                const location = getHiveLocation(hive);
+                if (!location) {
+                  return null;
+                }
+
                 return (
                   <TouchableOpacity
                     key={hive.id}
                     style={styles.hiveInMapButton}
                     onPress={() => openHiveInMaps(hive)}
+                    activeOpacity={0.85}
+                    testID={`map-list-${hive.id}`}
                   >
                     <View style={styles.hiveInMapIcon}>
                       <Hexagon size={20} color={Colors.light.primary} />
                     </View>
                     <View style={styles.hiveInMapContent}>
                       <Text style={styles.hiveInMapText}>{hive.label}</Text>
-                      <Text style={styles.hiveInMapYard}>{yard.name}</Text>
+                      <Text style={styles.hiveInMapYard}>{yard?.name ?? "Unknown yard"}</Text>
                       <Text style={styles.hiveInMapCoords}>
-                        📍 {yard.latitude?.toFixed(4)}, {yard.longitude?.toFixed(4)}
+                        📍 {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                        {location.source === "yard" ? " (yard)" : ""}
                       </Text>
                     </View>
                     <View
                       style={[
                         styles.mapStatusBadge,
-                        { backgroundColor: getStatusColor(hive.status) + "20" },
+                        { backgroundColor: `${getStatusColor(hive.status)}20` },
                       ]}
                     >
                       <Text style={[styles.mapStatusText, { color: getStatusColor(hive.status) }]}>
@@ -253,12 +394,12 @@ export default function HivesScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>New Hive</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity onPress={() => setModalVisible(false)} testID="close-hive-modal">
                 <X size={24} color={Colors.light.text} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.form}>
+            <ScrollView style={styles.form} keyboardShouldPersistTaps="handled">
               <Text style={styles.label}>Yard *</Text>
               <View style={styles.pickerContainer}>
                 {yards.map((yard) => (
@@ -268,7 +409,8 @@ export default function HivesScreen() {
                       styles.pickerOption,
                       formData.yard_id === yard.id && styles.pickerOptionSelected,
                     ]}
-                    onPress={() => setFormData({ ...formData, yard_id: yard.id })}
+                    onPress={() => setFormData((prev) => ({ ...prev, yard_id: yard.id }))}
+                    testID={`select-yard-${yard.id}`}
                   >
                     <Text
                       style={[
@@ -286,28 +428,97 @@ export default function HivesScreen() {
               <TextInput
                 style={styles.input}
                 value={formData.label}
-                onChangeText={(text) => setFormData({ ...formData, label: text })}
+                onChangeText={(text) => setFormData((prev) => ({ ...prev, label: text }))}
                 placeholder="e.g., Hive 1"
                 placeholderTextColor={Colors.light.tabIconDefault}
+                autoCapitalize="words"
+                testID="input-hive-label"
               />
 
               <Text style={styles.label}>Hive Type</Text>
               <TextInput
                 style={styles.input}
                 value={formData.hive_type}
-                onChangeText={(text) => setFormData({ ...formData, hive_type: text })}
+                onChangeText={(text) => setFormData((prev) => ({ ...prev, hive_type: text }))}
                 placeholder="e.g., Langstroth"
                 placeholderTextColor={Colors.light.tabIconDefault}
+                testID="input-hive-type"
               />
 
               <Text style={styles.label}>Number of Frames</Text>
               <TextInput
                 style={styles.input}
                 value={formData.frames}
-                onChangeText={(text) => setFormData({ ...formData, frames: text })}
+                onChangeText={(text) => setFormData((prev) => ({ ...prev, frames: text }))}
                 placeholder="e.g., 10"
                 placeholderTextColor={Colors.light.tabIconDefault}
-                keyboardType="numeric"
+                keyboardType="number-pad"
+                testID="input-hive-frames"
+              />
+
+              <Text style={styles.label}>Status</Text>
+              <View style={styles.statusGroup}>
+                {(["Active", "Split", "Deadout"] as const).map((status) => (
+                  <TouchableOpacity
+                    key={status}
+                    style={[
+                      styles.statusChip,
+                      formData.status === status && styles.statusChipActive,
+                    ]}
+                    onPress={() => setFormData((prev) => ({ ...prev, status }))}
+                    testID={`input-status-${status}`}
+                  >
+                    <Text
+                      style={[
+                        styles.statusChipText,
+                        formData.status === status && styles.statusChipTextActive,
+                      ]}
+                    >
+                      {status}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.label}>Coordinates</Text>
+              <View style={styles.coordinatesRow}>
+                <View style={styles.coordinateField}>
+                  <Text style={styles.helperLabel}>Latitude</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.latitude}
+                    onChangeText={(text) => setFormData((prev) => ({ ...prev, latitude: text }))}
+                    placeholder="40.7128"
+                    placeholderTextColor={Colors.light.tabIconDefault}
+                    keyboardType="decimal-pad"
+                    testID="input-hive-latitude"
+                  />
+                </View>
+                <View style={styles.coordinateField}>
+                  <Text style={styles.helperLabel}>Longitude</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.longitude}
+                    onChangeText={(text) => setFormData((prev) => ({ ...prev, longitude: text }))}
+                    placeholder="-73.9352"
+                    placeholderTextColor={Colors.light.tabIconDefault}
+                    keyboardType="decimal-pad"
+                    testID="input-hive-longitude"
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.label}>Notes</Text>
+              <TextInput
+                style={[styles.input, styles.notesInput]}
+                value={formData.notes}
+                onChangeText={(text) => setFormData((prev) => ({ ...prev, notes: text }))}
+                placeholder="Access details, temperament cues, seasonal reminders..."
+                placeholderTextColor={Colors.light.tabIconDefault}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                testID="input-hive-notes"
               />
             </ScrollView>
 
@@ -315,10 +526,15 @@ export default function HivesScreen() {
               <TouchableOpacity
                 style={[styles.button, styles.buttonSecondary]}
                 onPress={() => setModalVisible(false)}
+                testID="cancel-hive-creation"
               >
                 <Text style={styles.buttonSecondaryText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.buttonPrimary]} onPress={handleSubmit}>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonPrimary]}
+                onPress={handleSubmit}
+                testID="submit-hive-creation"
+              >
                 <Text style={styles.buttonPrimaryText}>Create Hive</Text>
               </TouchableOpacity>
             </View>
@@ -422,6 +638,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.tabIconDefault,
   },
+  hiveCoords: {
+    fontSize: 12,
+    color: Colors.light.secondary,
+    marginTop: 4,
+  },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -511,6 +732,14 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginBottom: 8,
   },
+  helperLabel: {
+    fontSize: 12,
+    fontWeight: "500" as const,
+    color: Colors.light.tabIconDefault,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
   pickerContainer: {
     marginBottom: 16,
   },
@@ -543,6 +772,43 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.light.border,
+  },
+  notesInput: {
+    minHeight: 108,
+  },
+  statusGroup: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  statusChip: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: Colors.light.background,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  statusChipActive: {
+    backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primary,
+  },
+  statusChipText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: Colors.light.tabIconDefault,
+  },
+  statusChipTextActive: {
+    color: "#FFFFFF",
+  },
+  coordinatesRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  coordinateField: {
+    flex: 1,
   },
   modalActions: {
     flexDirection: "row",
