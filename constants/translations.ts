@@ -51,6 +51,89 @@ export const translations = {
       brood: "Brood",
       mites: "Mites",
       temper: "Temper",
+      futureDaysSuffix: "days",
+      hero: {
+        eyebrow: "Apiary Mission Control",
+        vitalityLabel: "Vitality",
+      },
+      metrics: {
+        honeyYieldLabel: "Honey Yield",
+        taskVelocityLabel: "Task Velocity",
+        honeyYieldUnit: "kg",
+        openSuffix: "open",
+      },
+      vitality: {
+        statuses: {
+          momentum: {
+            title: "Momentum Building",
+            narrative: "Log a focused inspection to unlock deeper vitality analytics.",
+          },
+          thriving: {
+            title: "Thriving Signal",
+            narrative: "Colonies are peaking. Keep momentum with light-touch inspections.",
+          },
+          healthy: {
+            title: "Healthy Trajectory",
+            narrative: "Cadence looks balanced. Continue the current inspection rhythm.",
+          },
+          watchlist: {
+            title: "Watchlist",
+            narrative: "Varroa or nutrition may need attention in the next run.",
+          },
+        },
+      },
+      operations: {
+        title: "Operations Pulse",
+        subtitle: "Track the next critical move",
+        nextTaskLabel: "Next Task",
+        noTaskTitle: "No task scheduled",
+        duePrefix: "Due",
+        createTaskHint: "Create a task to anchor the week",
+        inspectionLabel: "Inspection Rhythm",
+        inspectionHint: "Maintain cadence for consistent brood lift",
+      },
+      quickActions: {
+        title: "Quick Actions",
+        subtitle: "Launch the workflows that keep you ahead",
+        actions: {
+          logInspection: {
+            label: "Log Inspection",
+            caption: "Capture brood, mites, and mood snapshot",
+          },
+          planTask: {
+            label: "Plan Task",
+            caption: "Stack upcoming work into focused bursts",
+          },
+          reviewHives: {
+            label: "Review Hives",
+            caption: "Drill into colony narratives and signals",
+          },
+        },
+      },
+      insights: {
+        title: "Insight Tiles",
+        subtitle: "Signal-rich cards updating in real time",
+        harvest: {
+          title: "Harvest Momentum",
+          hintWithData: "Last pull {{relative}} • {{weight}} kg",
+          hintNoData: "Log your first harvest to unlock projections",
+        },
+        tasks: {
+          title: "Task Focus",
+          hintWithData: "{{title}} • due {{relative}}",
+          hintNoData: "Design your next sprint to stay ahead",
+        },
+        vitality: {
+          title: "Vitality Index",
+        },
+        growth: {
+          title: "Growth Velocity",
+          hint: "{{completed}} completed • {{total}} total tasks",
+        },
+      },
+      relativeDates: {
+        noRecord: "No record",
+      },
     },
     yards: {
       title: "Yards",
@@ -374,6 +457,89 @@ export const translations = {
       brood: "Cría",
       mites: "Ácaros",
       temper: "Temperamento",
+      futureDaysSuffix: "días",
+      hero: {
+        eyebrow: "Centro de Control del Apiario",
+        vitalityLabel: "Vitalidad",
+      },
+      metrics: {
+        honeyYieldLabel: "Producción de Miel",
+        taskVelocityLabel: "Velocidad de Tareas",
+        honeyYieldUnit: "kg",
+        openSuffix: "abiertas",
+      },
+      vitality: {
+        statuses: {
+          momentum: {
+            title: "Impulso en Construcción",
+            narrative: "Registra una inspección enfocada para desbloquear analíticas de vitalidad más profundas.",
+          },
+          thriving: {
+            title: "Señal en Auge",
+            narrative: "Las colmenas están en su punto máximo. Mantén el impulso con inspecciones ligeras.",
+          },
+          healthy: {
+            title: "Trayectoria Saludable",
+            narrative: "El ritmo parece equilibrado. Continúa con la cadencia actual de inspecciones.",
+          },
+          watchlist: {
+            title: "Lista de Vigilancia",
+            narrative: "Varroa o la nutrición pueden requerir atención en la próxima ronda.",
+          },
+        },
+      },
+      operations: {
+        title: "Pulso Operativo",
+        subtitle: "Sigue el próximo movimiento crítico",
+        nextTaskLabel: "Próxima Tarea",
+        noTaskTitle: "Ninguna tarea programada",
+        duePrefix: "Vence",
+        createTaskHint: "Crea una tarea para anclar la semana",
+        inspectionLabel: "Ritmo de Inspecciones",
+        inspectionHint: "Mantén la cadencia para un impulso constante de cría",
+      },
+      quickActions: {
+        title: "Acciones Rápidas",
+        subtitle: "Lanza los flujos de trabajo que te mantienen adelante",
+        actions: {
+          logInspection: {
+            label: "Registrar Inspección",
+            caption: "Captura una instantánea de cría, ácaros y temperamento",
+          },
+          planTask: {
+            label: "Planificar Tarea",
+            caption: "Agrupa el trabajo próximo en ráfagas enfocadas",
+          },
+          reviewHives: {
+            label: "Revisar Colmenas",
+            caption: "Profundiza en las narrativas y señales de la colonia",
+          },
+        },
+      },
+      insights: {
+        title: "Tarjetas de Insight",
+        subtitle: "Tarjetas ricas en señales que se actualizan en tiempo real",
+        harvest: {
+          title: "Impulso de Cosecha",
+          hintWithData: "Última extracción {{relative}} • {{weight}} kg",
+          hintNoData: "Registra tu primera cosecha para desbloquear proyecciones",
+        },
+        tasks: {
+          title: "Enfoque de Tareas",
+          hintWithData: "{{title}} • vence {{relative}}",
+          hintNoData: "Diseña tu próximo sprint para mantenerte al día",
+        },
+        vitality: {
+          title: "Índice de Vitalidad",
+        },
+        growth: {
+          title: "Velocidad de Crecimiento",
+          hint: "{{completed}} completadas • {{total}} tareas totales",
+        },
+      },
+      relativeDates: {
+        noRecord: "Sin registro",
+      },
     },
     yards: {
       title: "Apiarios",
@@ -697,6 +863,89 @@ export const translations = {
       brood: "Cria",
       mites: "Ácaros",
       temper: "Temperamento",
+      futureDaysSuffix: "dias",
+      hero: {
+        eyebrow: "Centro de Controle do Apiário",
+        vitalityLabel: "Vitalidade",
+      },
+      metrics: {
+        honeyYieldLabel: "Produção de Mel",
+        taskVelocityLabel: "Velocidade das Tarefas",
+        honeyYieldUnit: "kg",
+        openSuffix: "abertas",
+      },
+      vitality: {
+        statuses: {
+          momentum: {
+            title: "Impulso em Construção",
+            narrative: "Registre uma inspeção focada para desbloquear análises de vitalidade mais profundas.",
+          },
+          thriving: {
+            title: "Sinal em Ascensão",
+            narrative: "As colmeias estão no auge. Mantenha o impulso com inspeções leves.",
+          },
+          healthy: {
+            title: "Trajetória Saudável",
+            narrative: "O ritmo parece equilibrado. Continue com a cadência atual de inspeções.",
+          },
+          watchlist: {
+            title: "Lista de Atenção",
+            narrative: "Varroa ou nutrição podem precisar de atenção na próxima rodada.",
+          },
+        },
+      },
+      operations: {
+        title: "Pulso Operacional",
+        subtitle: "Acompanhe o próximo movimento crítico",
+        nextTaskLabel: "Próxima Tarefa",
+        noTaskTitle: "Nenhuma tarefa agendada",
+        duePrefix: "Vence",
+        createTaskHint: "Crie uma tarefa para ancorar a semana",
+        inspectionLabel: "Ritmo de Inspeções",
+        inspectionHint: "Mantenha a cadência para impulsionar a cria de forma constante",
+      },
+      quickActions: {
+        title: "Ações Rápidas",
+        subtitle: "Inicie os fluxos de trabalho que mantêm você à frente",
+        actions: {
+          logInspection: {
+            label: "Registrar Inspeção",
+            caption: "Capture um instantâneo de cria, ácaros e humor",
+          },
+          planTask: {
+            label: "Planejar Tarefa",
+            caption: "Agrupe o trabalho futuro em ciclos focados",
+          },
+          reviewHives: {
+            label: "Revisar Colmeias",
+            caption: "Aprofunde-se nas narrativas e sinais das colônias",
+          },
+        },
+      },
+      insights: {
+        title: "Cartões de Insight",
+        subtitle: "Cartões ricos em sinais atualizados em tempo real",
+        harvest: {
+          title: "Impulso da Colheita",
+          hintWithData: "Última extração {{relative}} • {{weight}} kg",
+          hintNoData: "Registre sua primeira colheita para desbloquear projeções",
+        },
+        tasks: {
+          title: "Foco em Tarefas",
+          hintWithData: "{{title}} • vence {{relative}}",
+          hintNoData: "Desenhe seu próximo sprint para manter o ritmo",
+        },
+        vitality: {
+          title: "Índice de Vitalidade",
+        },
+        growth: {
+          title: "Velocidade de Crescimento",
+          hint: "{{completed}} concluídas • {{total}} tarefas no total",
+        },
+      },
+      relativeDates: {
+        noRecord: "Sem registro",
+      },
     },
     yards: {
       title: "Apiários",

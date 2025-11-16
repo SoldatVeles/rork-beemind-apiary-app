@@ -24,6 +24,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "../../constants/colors";
 import { useBeeMindStore } from "../../store/beemind-store";
 import { useUserPreferences } from "../../store/user-preferences-store";
+import { useLanguage } from "../../store/language-store";
+import type { TranslationKeys } from "../../constants/translations";
 
 interface InsightConfig {
   id: string;
@@ -49,6 +51,17 @@ interface InteractiveCardProps {
   style?: StyleProp<ViewStyle>;
   pressedStyle?: StyleProp<ViewStyle>;
 }
+
+type HomeTranslation = TranslationKeys["home"];
+type VitalityStatusKey = keyof HomeTranslation["vitality"]["statuses"];
+
+interface ColonyVitality {
+  score: number;
+  statusKey: VitalityStatusKey;
+}
+
+const templateReplace = (template: string, replacements: Record<string, string>) =>
+  template.replace(/\{\{(\w+)\}\}/g, (_match, key) => replacements[key] ?? "");
 
 function InteractiveCard({ children, onPress, testID, style, pressedStyle }: InteractiveCardProps) {
   const scale = useRef(new Animated.Value(1)).current;
@@ -92,25 +105,31 @@ function InteractiveCard({ children, onPress, testID, style, pressedStyle }: Int
   );
 }
 
-function formatRelativeDate(iso?: string) {
+function formatRelativeDate(home: HomeTranslation, iso?: string) {
   if (!iso) {
-    return "No record";
+    return home.relativeDates.noRecord;
   }
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {
-    return "No record";
+    return home.relativeDates.noRecord;
   }
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.round(diffMs / 86400000);
   if (diffDays === 0) {
-    return "Today";
+    return home.today;
   }
   if (diffDays === 1) {
-    return "Yesterday";
+    return home.yesterday;
+  }
+  if (diffDays === -1) {
+    return home.tomorrow;
   }
   if (diffDays > 1 && diffDays < 7) {
-    return `${diffDays} days ago`;
+    return `${diffDays} ${home.daysAgo}`;
+  }
+  if (diffDays < -1 && diffDays > -7) {
+    return `${home.inDays} ${Math.abs(diffDays)} ${home.futureDaysSuffix}`;
   }
   return date.toLocaleDateString();
 }
@@ -118,6 +137,8 @@ function formatRelativeDate(iso?: string) {
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
+  const homeStrings = t.home;
   const { tasks, inspections, hives, harvests, loadSeedData } = useBeeMindStore();
   const { hasCompletedOnboarding } = useUserPreferences();
 
@@ -128,7 +149,14 @@ export default function HomeScreen() {
     }
   }, [hives.length, loadSeedData]);
 
-  console.log("[HomeScreen] tasks", tasks.length, "inspections", inspections.length, "harvests", harvests.length);
+  console.log(
+    "[HomeScreen] tasks",
+    tasks.length,
+    "inspections",
+    inspections.length,
+    "harvests",
+    harvests.length
+  );
 
   const pendingTasks = useMemo(() => tasks.filter((task) => !task.is_done), [tasks]);
   const completedTasksCount = useMemo(() => tasks.filter((task) => task.is_done).length, [tasks]);
@@ -144,146 +172,172 @@ export default function HomeScreen() {
     if (scheduled.length === 0) {
       return undefined;
     }
-    return [...scheduled].sort((a, b) => new Date(a.due_at ?? 0).getTime() - new Date(b.due_at ?? 0).getTime())[0];
+    return [...scheduled].sort(
+      (a, b) => new Date(a.due_at ?? 0).getTime() - new Date(b.due_at ?? 0).getTime()
+    )[0];
   }, [pendingTasks]);
 
-  const honeyYield = useMemo(() => harvests.reduce((sum, harvest) => sum + harvest.weight_kg, 0), [harvests]);
+  const honeyYield = useMemo(
+    () => harvests.reduce((sum, harvest) => sum + harvest.weight_kg, 0),
+    [harvests]
+  );
   const latestHarvest = useMemo(() => {
     if (harvests.length === 0) {
       return undefined;
     }
-    return [...harvests].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+    return [...harvests].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )[0];
   }, [harvests]);
 
-  const colonyVitality = useMemo(() => {
+  const colonyVitality = useMemo<ColonyVitality>(() => {
     if (inspections.length === 0) {
       return {
         score: 72,
-        status: "Momentum Building",
-        narrative: "Log a focused inspection to unlock deeper vitality analytics.",
+        statusKey: "momentum",
       };
     }
-    const broodScore = inspections.reduce((acc, inspection) => {
-      if (inspection.brood_pattern === "solid") {
-        return acc + 1;
-      }
-      if (inspection.brood_pattern === "spotty") {
-        return acc + 0.6;
-      }
-      return acc + 0.3;
-    }, 0) / inspections.length;
 
-    const averageTemper = inspections.reduce((acc, inspection) => acc + (inspection.temper ?? 3), 0) / inspections.length;
-    const averageMites = inspections.reduce((acc, inspection) => acc + (inspection.mites_per_100 ?? 0), 0) / inspections.length;
+    const broodScore =
+      inspections.reduce((acc, inspection) => {
+        if (inspection.brood_pattern === "solid") {
+          return acc + 1;
+        }
+        if (inspection.brood_pattern === "spotty") {
+          return acc + 0.6;
+        }
+        return acc + 0.3;
+      }, 0) / inspections.length;
 
-    const score = Math.max(45, Math.min(98, Math.round(62 + broodScore * 11 + averageTemper * 4 - averageMites * 3)));
+    const averageTemper =
+      inspections.reduce((acc, inspection) => acc + (inspection.temper ?? 3), 0) /
+      inspections.length;
+    const averageMites =
+      inspections.reduce((acc, inspection) => acc + (inspection.mites_per_100 ?? 0), 0) /
+      inspections.length;
 
-    let status = "Healthy Trajectory";
+    const score = Math.max(
+      45,
+      Math.min(98, Math.round(62 + broodScore * 11 + averageTemper * 4 - averageMites * 3))
+    );
+
+    let statusKey: VitalityStatusKey = "healthy";
     if (score >= 90) {
-      status = "Thriving Signal";
+      statusKey = "thriving";
     } else if (score <= 65) {
-      status = "Watchlist";
+      statusKey = "watchlist";
     }
-
-    const narrative = score >= 90
-      ? "Colonies are peaking. Keep momentum with light-touch inspections."
-      : score <= 65
-      ? "Varroa or nutrition may need attention in the next run."
-      : "Cadence looks balanced. Continue the current inspection rhythm.";
 
     return {
       score,
-      status,
-      narrative,
+      statusKey,
     };
   }, [inspections]);
 
   const daysSinceInspection = useMemo(() => {
     if (inspections.length === 0) {
-      return "No inspections yet";
+      return homeStrings.noInspections;
     }
-    const recent = [...inspections].sort((a, b) => new Date(b.performed_at).getTime() - new Date(a.performed_at).getTime())[0];
-    return formatRelativeDate(recent.performed_at);
-  }, [inspections]);
+    const recent = [...inspections].sort(
+      (a, b) => new Date(b.performed_at).getTime() - new Date(a.performed_at).getTime()
+    )[0];
+    return formatRelativeDate(homeStrings, recent.performed_at);
+  }, [homeStrings, inspections]);
 
-  const quickActions: QuickActionConfig[] = useMemo(
+  const quickActions = useMemo<QuickActionConfig[]>(
     () => [
       {
         id: "log-inspection",
-        label: "Log Inspection",
-        caption: "Capture brood, mites, and mood snapshot",
+        label: homeStrings.quickActions.actions.logInspection.label,
+        caption: homeStrings.quickActions.actions.logInspection.caption,
         route: "/inspection/new",
         icon: <Activity size={20} color={Colors.light.primary} />,
       },
       {
         id: "plan-task",
-        label: "Plan Task",
-        caption: "Stack upcoming work into focused bursts",
+        label: homeStrings.quickActions.actions.planTask.label,
+        caption: homeStrings.quickActions.actions.planTask.caption,
         route: "/(tabs)/tasks",
         icon: <CalendarCheck size={20} color={Colors.light.primary} />,
       },
       {
         id: "review-hives",
-        label: "Review Hives",
-        caption: "Drill into colony narratives and signals",
+        label: homeStrings.quickActions.actions.reviewHives.label,
+        caption: homeStrings.quickActions.actions.reviewHives.caption,
         route: "/(tabs)/hives",
         icon: <Hexagon size={20} color={Colors.light.primary} />,
       },
-    ],
-    [router]
+    ], [homeStrings.quickActions.actions]
   );
 
-  const insights: InsightConfig[] = useMemo(
-    () => [
+  const vitalityCopy = homeStrings.vitality.statuses[colonyVitality.statusKey];
+
+  const insights = useMemo<InsightConfig[]>(() => {
+    const harvestHint = latestHarvest
+      ? templateReplace(homeStrings.insights.harvest.hintWithData, {
+          relative: formatRelativeDate(homeStrings, latestHarvest.created_at),
+          weight: latestHarvest.weight_kg.toFixed(1),
+        })
+      : homeStrings.insights.harvest.hintNoData;
+
+    const taskHint = upcomingTask
+      ? templateReplace(homeStrings.insights.tasks.hintWithData, {
+          title: upcomingTask.title,
+          relative: formatRelativeDate(homeStrings, upcomingTask.due_at),
+        })
+      : homeStrings.insights.tasks.hintNoData;
+
+    const growthHint = templateReplace(homeStrings.insights.growth.hint, {
+      completed: String(completedTasksCount),
+      total: String(tasks.length),
+    });
+
+    return [
       {
         id: "harvest-trend",
-        title: "Harvest Momentum",
-        value: `${honeyYield.toFixed(1)} kg`,
-        hint: latestHarvest
-          ? `Last pull ${formatRelativeDate(latestHarvest.created_at)} • ${latestHarvest.weight_kg.toFixed(1)} kg`
-          : "Log your first harvest to unlock projections",
+        title: homeStrings.insights.harvest.title,
+        value: `${honeyYield.toFixed(1)} ${homeStrings.metrics.honeyYieldUnit}`,
+        hint: harvestHint,
         icon: <Droplet size={18} color={Colors.light.secondary} />,
         route: "/(tabs)/harvests",
       },
       {
         id: "task-focus",
-        title: "Task Focus",
-        value: `${pendingTasks.length} open`,
-        hint: upcomingTask
-          ? `${upcomingTask.title} • due ${formatRelativeDate(upcomingTask.due_at)}`
-          : "Design your next sprint to stay ahead",
+        title: homeStrings.insights.tasks.title,
+        value: `${pendingTasks.length} ${homeStrings.metrics.openSuffix}`,
+        hint: taskHint,
         icon: <CalendarCheck size={18} color={Colors.light.secondary} />,
         route: "/(tabs)/tasks",
       },
       {
         id: "vitality",
-        title: "Vitality Index",
+        title: homeStrings.insights.vitality.title,
         value: `${colonyVitality.score}`,
-        hint: colonyVitality.narrative,
+        hint: vitalityCopy.narrative,
         icon: <Leaf size={18} color={Colors.light.secondary} />,
         route: "/(tabs)/hives",
       },
       {
         id: "growth",
-        title: "Growth Velocity",
-        value: `${taskCompletionRate}% accomplished`,
-        hint: `${completedTasksCount} completed • ${tasks.length} total tasks`,
+        title: homeStrings.insights.growth.title,
+        value: `${taskCompletionRate}%`,
+        hint: growthHint,
         icon: <TrendingUp size={18} color={Colors.light.secondary} />,
         route: "/(tabs)/inventory",
       },
-    ],
-    [
-      colonyVitality.narrative,
-      colonyVitality.score,
-      completedTasksCount,
-      honeyYield,
-      latestHarvest,
-      pendingTasks.length,
-      taskCompletionRate,
-      tasks.length,
-      upcomingTask,
-    ]
-  );
+    ];
+  }, [
+    colonyVitality.score,
+    homeStrings,
+    honeyYield,
+    latestHarvest,
+    pendingTasks.length,
+    taskCompletionRate,
+    tasks.length,
+    upcomingTask,
+    vitalityCopy.narrative,
+    completedTasksCount,
+  ]);
 
   if (!hasCompletedOnboarding) {
     return <Redirect href="/onboarding" />;
@@ -296,7 +350,11 @@ export default function HomeScreen() {
       testID="dashboard-scroll"
     >
       <LinearGradient
-        colors={[Colors.light.primary + "66", Colors.light.secondary + "33", Colors.light.background]}
+        colors={[
+          Colors.light.primary + "66",
+          Colors.light.secondary + "33",
+          Colors.light.background,
+        ]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.hero, { paddingTop: 40 + insets.top }]}
@@ -304,29 +362,31 @@ export default function HomeScreen() {
       >
         <View style={styles.heroHeader}>
           <View style={styles.heroTitleBlock}>
-            <Text style={styles.heroEyebrow}>Apiary Mission Control</Text>
-            <Text style={styles.heroTitle}>{colonyVitality.status}</Text>
-            <Text style={styles.heroSubtitle}>{colonyVitality.narrative}</Text>
+            <Text style={styles.heroEyebrow}>{homeStrings.hero.eyebrow}</Text>
+            <Text style={styles.heroTitle}>{vitalityCopy.title}</Text>
+            <Text style={styles.heroSubtitle}>{vitalityCopy.narrative}</Text>
           </View>
           <View style={styles.scoreBadge}>
             <Text style={styles.scoreValue}>{colonyVitality.score}</Text>
-            <Text style={styles.scoreLabel}>Vitality</Text>
+            <Text style={styles.scoreLabel}>{homeStrings.hero.vitalityLabel}</Text>
           </View>
         </View>
         <View style={styles.heroMetricRow}>
           <View style={styles.heroMetricCard} testID="metric-active-hives">
             <Hexagon size={18} color={Colors.light.text} />
-            <Text style={styles.metricLabel}>Active Hives</Text>
+            <Text style={styles.metricLabel}>{homeStrings.activeHives}</Text>
             <Text style={styles.metricValue}>{hives.length}</Text>
           </View>
           <View style={styles.heroMetricCard} testID="metric-honey-yield">
             <Droplet size={18} color={Colors.light.text} />
-            <Text style={styles.metricLabel}>Honey Yield</Text>
-            <Text style={styles.metricValue}>{honeyYield.toFixed(1)} kg</Text>
+            <Text style={styles.metricLabel}>{homeStrings.metrics.honeyYieldLabel}</Text>
+            <Text style={styles.metricValue}>
+              {honeyYield.toFixed(1)} {homeStrings.metrics.honeyYieldUnit}
+            </Text>
           </View>
           <View style={styles.heroMetricCard} testID="metric-task-rate">
             <TrendingUp size={18} color={Colors.light.text} />
-            <Text style={styles.metricLabel}>Task Velocity</Text>
+            <Text style={styles.metricLabel}>{homeStrings.metrics.taskVelocityLabel}</Text>
             <Text style={styles.metricValue}>{taskCompletionRate}%</Text>
           </View>
         </View>
@@ -334,17 +394,24 @@ export default function HomeScreen() {
 
       <View style={styles.section} testID="operations-section">
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Operations Pulse</Text>
-          <Text style={styles.sectionHint}>Track the next critical move</Text>
+          <Text style={styles.sectionTitle}>{homeStrings.operations.title}</Text>
+          <Text style={styles.sectionHint}>{homeStrings.operations.subtitle}</Text>
         </View>
         <View style={styles.timelineCard}>
           <View style={styles.timelineRow}>
             <CalendarCheck size={18} color={Colors.light.secondary} />
             <View style={styles.timelineContent}>
-              <Text style={styles.timelineLabel}>Next Task</Text>
-              <Text style={styles.timelineValue}>{upcomingTask ? upcomingTask.title : "No task scheduled"}</Text>
+              <Text style={styles.timelineLabel}>{homeStrings.operations.nextTaskLabel}</Text>
+              <Text style={styles.timelineValue}>
+                {upcomingTask ? upcomingTask.title : homeStrings.operations.noTaskTitle}
+              </Text>
               <Text style={styles.timelineHint}>
-                {upcomingTask ? `Due ${formatRelativeDate(upcomingTask.due_at)}` : "Create a task to anchor the week"}
+                {upcomingTask
+                  ? `${homeStrings.operations.duePrefix} ${formatRelativeDate(
+                      homeStrings,
+                      upcomingTask.due_at
+                    )}`
+                  : homeStrings.operations.createTaskHint}
               </Text>
             </View>
             <Pressable
@@ -359,9 +426,9 @@ export default function HomeScreen() {
           <View style={styles.timelineRow}>
             <Activity size={18} color={Colors.light.secondary} />
             <View style={styles.timelineContent}>
-              <Text style={styles.timelineLabel}>Inspection Rhythm</Text>
+              <Text style={styles.timelineLabel}>{homeStrings.operations.inspectionLabel}</Text>
               <Text style={styles.timelineValue}>{daysSinceInspection}</Text>
-              <Text style={styles.timelineHint}>Maintain cadence for consistent brood lift</Text>
+              <Text style={styles.timelineHint}>{homeStrings.operations.inspectionHint}</Text>
             </View>
             <Pressable
               onPress={() => router.push("/(tabs)/hives")}
@@ -376,8 +443,8 @@ export default function HomeScreen() {
 
       <View style={styles.section} testID="quick-actions-section">
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <Text style={styles.sectionHint}>Launch the workflows that keep you ahead</Text>
+          <Text style={styles.sectionTitle}>{homeStrings.quickActions.title}</Text>
+          <Text style={styles.sectionHint}>{homeStrings.quickActions.subtitle}</Text>
         </View>
         <View style={styles.quickActionsGrid}>
           {quickActions.map((action) => (
@@ -399,8 +466,8 @@ export default function HomeScreen() {
 
       <View style={styles.section} testID="insights-section">
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Insight Tiles</Text>
-          <Text style={styles.sectionHint}>Signal-rich cards updating in real time</Text>
+          <Text style={styles.sectionTitle}>{homeStrings.insights.title}</Text>
+          <Text style={styles.sectionHint}>{homeStrings.insights.subtitle}</Text>
         </View>
         <View style={styles.insightsGrid}>
           {insights.map((insight) => (
