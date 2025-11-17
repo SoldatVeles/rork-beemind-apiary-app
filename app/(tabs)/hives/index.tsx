@@ -12,11 +12,12 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Hexagon, Map as MapIcon, Plus, Search, X } from "lucide-react-native";
+import { Hexagon, Map as MapIcon, Plus, Search, X, Navigation } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "../../../constants/colors";
 import { useBeeMindStore } from "../../../store/beemind-store";
 import type { Hive, HiveStatus } from "../../../types";
+import MapLocationPicker from "./MapLocationPicker";
 
 interface HiveFormState {
   yard_id: string;
@@ -43,6 +44,7 @@ export default function HivesScreen() {
   const [statusFilter, setStatusFilter] = useState<HiveStatus | "All">("All");
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [mapModalVisible, setMapModalVisible] = useState<boolean>(false);
+  const [mapPickerVisible, setMapPickerVisible] = useState<boolean>(false);
   const [formData, setFormData] = useState<HiveFormState>({
     yard_id: "",
     label: "",
@@ -481,32 +483,28 @@ export default function HivesScreen() {
               </View>
 
               <Text style={styles.label}>Coordinates</Text>
-              <View style={styles.coordinatesRow}>
-                <View style={styles.coordinateField}>
-                  <Text style={styles.helperLabel}>Latitude</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.latitude}
-                    onChangeText={(text) => setFormData((prev) => ({ ...prev, latitude: text }))}
-                    placeholder="40.7128"
-                    placeholderTextColor={Colors.light.tabIconDefault}
-                    keyboardType="decimal-pad"
-                    testID="input-hive-latitude"
-                  />
+              <TouchableOpacity
+                style={styles.mapPickerButton}
+                onPress={() => setMapPickerVisible(true)}
+                testID="open-map-picker"
+              >
+                <Navigation size={20} color={Colors.light.primary} />
+                <View style={styles.mapPickerContent}>
+                  {formData.latitude && formData.longitude ? (
+                    <>
+                      <Text style={styles.mapPickerTextPrimary}>Location Set</Text>
+                      <Text style={styles.mapPickerTextSecondary}>
+                        {parseFloat(formData.latitude).toFixed(4)}, {parseFloat(formData.longitude).toFixed(4)}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.mapPickerTextPrimary}>Tap to select on map</Text>
+                      <Text style={styles.mapPickerTextSecondary}>Drop a pin on the map</Text>
+                    </>
+                  )}
                 </View>
-                <View style={styles.coordinateField}>
-                  <Text style={styles.helperLabel}>Longitude</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.longitude}
-                    onChangeText={(text) => setFormData((prev) => ({ ...prev, longitude: text }))}
-                    placeholder="-73.9352"
-                    placeholderTextColor={Colors.light.tabIconDefault}
-                    keyboardType="decimal-pad"
-                    testID="input-hive-longitude"
-                  />
-                </View>
-              </View>
+              </TouchableOpacity>
 
               <Text style={styles.label}>Notes</Text>
               <TextInput
@@ -540,6 +538,28 @@ export default function HivesScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      <Modal
+        visible={mapPickerVisible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setMapPickerVisible(false)}
+      >
+        <MapLocationPicker
+          initialLatitude={formData.latitude ? parseFloat(formData.latitude) : undefined}
+          initialLongitude={formData.longitude ? parseFloat(formData.longitude) : undefined}
+          onConfirm={(latitude, longitude) => {
+            console.log("[HivesScreen] location confirmed", { latitude, longitude });
+            setFormData((prev) => ({
+              ...prev,
+              latitude: latitude.toString(),
+              longitude: longitude.toString(),
+            }));
+            setMapPickerVisible(false);
+          }}
+          onCancel={() => setMapPickerVisible(false)}
+        />
       </Modal>
     </View>
   );
@@ -967,5 +987,40 @@ const styles = StyleSheet.create({
   mapStatusText: {
     fontSize: 12,
     fontWeight: "600" as const,
+  },
+  mapPickerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.light.card,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
+  },
+  mapPickerContent: {
+    flex: 1,
+  },
+  mapPickerTextPrimary: {
+    fontSize: 16,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
+    marginBottom: 2,
+  },
+  mapPickerTextSecondary: {
+    fontSize: 14,
+    color: Colors.light.tabIconDefault,
   },
 });

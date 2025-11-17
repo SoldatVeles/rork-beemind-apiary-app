@@ -25,11 +25,13 @@ import {
   Pill,
   MapPin,
   MapPinned,
+  Navigation,
 } from "lucide-react-native";
 import Colors from "../../../constants/colors";
 import { useBeeMindStore } from "../../../store/beemind-store";
 import type { HiveStatus } from "../../../types";
 import MapViewComponent from "./MapView";
+import MapLocationPicker from "./MapLocationPicker";
 
 interface HiveEditFormState {
   yard_id: string;
@@ -89,6 +91,7 @@ export default function HiveDetailScreen() {
   const [queenModalVisible, setQueenModalVisible] = useState<boolean>(false);
   const [treatmentModalVisible, setTreatmentModalVisible] = useState<boolean>(false);
   const [editModalVisible, setEditModalVisible] = useState<boolean>(false);
+  const [mapPickerVisible, setMapPickerVisible] = useState<boolean>(false);
   const [queenFormData, setQueenFormData] = useState({
     hatch_date: "",
     origin: "",
@@ -849,32 +852,28 @@ export default function HiveDetailScreen() {
               </View>
 
               <Text style={styles.label}>Coordinates</Text>
-              <View style={styles.coordinatesRow}>
-                <View style={styles.coordinateField}>
-                  <Text style={styles.helperLabel}>Latitude</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={editForm.latitude}
-                    onChangeText={(text) => setEditForm((prev) => ({ ...prev, latitude: text }))}
-                    placeholder="40.7128"
-                    placeholderTextColor={Colors.light.tabIconDefault}
-                    keyboardType="decimal-pad"
-                    testID="edit-hive-latitude"
-                  />
+              <TouchableOpacity
+                style={styles.mapPickerButton}
+                onPress={() => setMapPickerVisible(true)}
+                testID="open-map-picker-edit"
+              >
+                <Navigation size={20} color={Colors.light.primary} />
+                <View style={styles.mapPickerContent}>
+                  {editForm.latitude && editForm.longitude ? (
+                    <>
+                      <Text style={styles.mapPickerTextPrimary}>Location Set</Text>
+                      <Text style={styles.mapPickerTextSecondary}>
+                        {parseFloat(editForm.latitude).toFixed(4)}, {parseFloat(editForm.longitude).toFixed(4)}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.mapPickerTextPrimary}>Tap to select on map</Text>
+                      <Text style={styles.mapPickerTextSecondary}>Drop a pin on the map</Text>
+                    </>
+                  )}
                 </View>
-                <View style={styles.coordinateField}>
-                  <Text style={styles.helperLabel}>Longitude</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={editForm.longitude}
-                    onChangeText={(text) => setEditForm((prev) => ({ ...prev, longitude: text }))}
-                    placeholder="-73.9352"
-                    placeholderTextColor={Colors.light.tabIconDefault}
-                    keyboardType="decimal-pad"
-                    testID="edit-hive-longitude"
-                  />
-                </View>
-              </View>
+              </TouchableOpacity>
 
               <Text style={styles.label}>Notes</Text>
               <TextInput
@@ -1084,6 +1083,28 @@ export default function HiveDetailScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      <Modal
+        visible={mapPickerVisible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setMapPickerVisible(false)}
+      >
+        <MapLocationPicker
+          initialLatitude={editForm.latitude ? parseFloat(editForm.latitude) : undefined}
+          initialLongitude={editForm.longitude ? parseFloat(editForm.longitude) : undefined}
+          onConfirm={(latitude, longitude) => {
+            console.log("[HiveDetail] location confirmed", { latitude, longitude });
+            setEditForm((prev) => ({
+              ...prev,
+              latitude: latitude.toString(),
+              longitude: longitude.toString(),
+            }));
+            setMapPickerVisible(false);
+          }}
+          onCancel={() => setMapPickerVisible(false)}
+        />
       </Modal>
     </View>
   );
@@ -1886,5 +1907,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.tabIconDefault,
     fontStyle: "italic",
+  },
+  mapPickerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.light.card,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
+  },
+  mapPickerContent: {
+    flex: 1,
+  },
+  mapPickerTextPrimary: {
+    fontSize: 16,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
+    marginBottom: 2,
+  },
+  mapPickerTextSecondary: {
+    fontSize: 14,
+    color: Colors.light.tabIconDefault,
   },
 });
