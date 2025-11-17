@@ -16,12 +16,19 @@ export const [LanguageProvider, useLanguage] = createContextHook(() => {
   }, []);
 
   const loadLanguage = async () => {
+    const timeout = setTimeout(() => {
+      console.log('[Language] Load timeout, using default');
+      setIsLoading(false);
+    }, 3000);
+
     try {
       const stored = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
+      clearTimeout(timeout);
       if (stored && (stored === "en" || stored === "es" || stored === "pt")) {
         setLanguageState(stored as Language);
       }
     } catch (error) {
+      clearTimeout(timeout);
       console.error("Failed to load language:", error);
     } finally {
       setIsLoading(false);

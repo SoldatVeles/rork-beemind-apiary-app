@@ -23,10 +23,23 @@ export const createTrpcClient = () => {
         url: `${getBaseUrl()}/api/trpc`,
         transformer: superjson,
         async headers() {
-          const { data: { session } } = await supabase.auth.getSession();
-          return {
-            authorization: session?.access_token ? `Bearer ${session.access_token}` : "",
-          };
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            return {
+              authorization: session?.access_token ? `Bearer ${session.access_token}` : "",
+            };
+          } catch (error) {
+            console.error('[tRPC] Error getting session:', error);
+            return {
+              authorization: "",
+            };
+          }
+        },
+        fetch(url, options) {
+          return fetch(url, {
+            ...options,
+            signal: AbortSignal.timeout(10000),
+          });
         },
       }),
     ],

@@ -13,7 +13,16 @@ import { trpc, trpcClient } from "@/lib/trpc";
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      retryDelay: 1000,
+      staleTime: 5000,
+      networkMode: 'offlineFirst',
+    },
+  },
+});
 
 function RootLayoutNav() {
   return (

@@ -16,10 +16,20 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   useEffect(() => {
     console.log('[Auth] Initializing auth state');
     
+    const initTimeout = setTimeout(() => {
+      console.log('[Auth] Initialization timeout, setting loading to false');
+      setIsLoading(false);
+    }, 5000);
+    
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      clearTimeout(initTimeout);
       console.log('[Auth] Current session:', currentSession ? 'Authenticated' : 'Not authenticated');
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
+      setIsLoading(false);
+    }).catch((error) => {
+      clearTimeout(initTimeout);
+      console.error('[Auth] Error getting session:', error);
       setIsLoading(false);
     });
 

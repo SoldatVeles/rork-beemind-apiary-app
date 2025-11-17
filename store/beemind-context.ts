@@ -1,6 +1,7 @@
 import createContextHook from "@nkzw/create-context-hook";
 import { useMemo, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/store/auth-store";
 import type {
   Yard,
   Hive,
@@ -12,13 +13,29 @@ import type {
 } from "@/types";
 
 export const [BeeMindProvider, useBeeMind] = createContextHook(() => {
-  const yardsQuery = trpc.yards.list.useQuery();
-  const hivesQuery = trpc.hives.list.useQuery();
-  const tasksQuery = trpc.tasks.list.useQuery();
-  const queensQuery = trpc.queens.list.useQuery();
-  const inspectionsQuery = trpc.inspections.list.useQuery();
-  const harvestsQuery = trpc.harvests.list.useQuery();
-  const inventoryQuery = trpc.inventory.list.useQuery();
+  const { isAuthenticated } = useAuth();
+
+  const yardsQuery = trpc.yards.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const hivesQuery = trpc.hives.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const tasksQuery = trpc.tasks.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const queensQuery = trpc.queens.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const inspectionsQuery = trpc.inspections.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const harvestsQuery = trpc.harvests.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const inventoryQuery = trpc.inventory.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
 
   const createYardMutation = trpc.yards.create.useMutation({
     onSuccess: () => {
