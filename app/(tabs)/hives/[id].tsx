@@ -30,8 +30,8 @@ import {
 import Colors from "../../../constants/colors";
 import { useBeeMindStore } from "../../../store/beemind-store";
 import type { HiveStatus } from "../../../types";
-import MapViewComponent from "./MapView";
-import MapLocationPicker from "./MapLocationPicker";
+import MapViewComponent from "@/components/hives/MapView";
+import MapLocationPicker from "@/components/hives/MapLocationPicker";
 
 interface HiveEditFormState {
   yard_id: string;

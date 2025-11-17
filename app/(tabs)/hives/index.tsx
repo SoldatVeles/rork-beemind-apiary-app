@@ -16,7 +16,7 @@ import { useRouter } from "expo-router";
 import Colors from "../../../constants/colors";
 import { useBeeMindStore } from "../../../store/beemind-store";
 import type { Hive, HiveStatus } from "../../../types";
-import MapLocationPicker from "./MapLocationPicker";
+import MapLocationPicker from "@/components/hives/MapLocationPicker";
 
 interface HiveFormState {
   yard_id: string;
