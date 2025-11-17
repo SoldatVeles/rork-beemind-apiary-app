@@ -2,12 +2,12 @@ import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Modal, TextInput, Alert } from "react-native";
 import { PackageOpen, Plus, X, AlertTriangle } from "lucide-react-native";
 import Colors from "@/constants/colors";
-import { useBeeMindStore } from "@/store/beemind-store";
+import { useBeeMind } from "@/store/beemind-context";
 import { useLanguage } from "@/store/language-store";
 import type { InventoryItemCategory } from "@/types";
 
 export default function InventoryScreen() {
-  const { inventory, addInventoryItem, updateInventoryItem, deleteInventoryItem } = useBeeMindStore();
+  const { inventory, addInventoryItem, updateInventoryItem } = useBeeMind();
   const { t } = useLanguage();
   const [filter, setFilter] = useState<"all" | "lowStock" | "inStock">("all");
   const [modalVisible, setModalVisible] = useState<boolean>(false);

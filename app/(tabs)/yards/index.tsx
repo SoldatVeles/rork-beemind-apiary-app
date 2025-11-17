@@ -14,13 +14,13 @@ import { Map as MapIcon, MapPin, Navigation, Plus, Sparkles, X } from "lucide-re
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "../../../constants/colors";
-import { useBeeMindStore } from "../../../store/beemind-store";
+import { useBeeMind } from "../../../store/beemind-context";
 import { useLanguage } from "../../../store/language-store";
 
 export default function YardsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { yards, hives } = useBeeMindStore();
+  const { yards, hives } = useBeeMind();
   const { t } = useLanguage();
   const [mapModalVisible, setMapModalVisible] = useState<boolean>(false);
 

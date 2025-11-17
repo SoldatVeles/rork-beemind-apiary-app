@@ -13,7 +13,7 @@ import { Sprout, TrendingUp, Award, CheckCircle, Globe } from "lucide-react-nati
 import Colors from "@/constants/colors";
 import { useUserPreferences, type ExperienceLevel } from "@/store/user-preferences-store";
 import { useLanguage, type Language } from "@/store/language-store";
-import { useBeeMindStore } from "@/store/beemind-store";
+import { useBeeMind } from "@/store/beemind-context";
 
 interface LevelOption {
   level: ExperienceLevel;
@@ -28,7 +28,7 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const { setExperienceLevel, completeOnboarding } = useUserPreferences();
   const { t, language, setLanguage } = useLanguage();
-  const { addYard } = useBeeMindStore();
+  const { addYard } = useBeeMind();
   const [step, setStep] = useState<"language" | "level" | "yardName">("language");
   const [selectedLevel, setSelectedLevel] = useState<ExperienceLevel | null>(null);
   const [yardName, setYardName] = useState<string>("");

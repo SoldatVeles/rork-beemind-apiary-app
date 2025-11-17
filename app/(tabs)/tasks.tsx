@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Modal, TextInput, Alert } from "react-native";
 import { CheckSquare, Plus, Square, RotateCcw, MapPin, Trash2, Edit3, Filter, SortAsc } from "lucide-react-native";
 import Colors from "@/constants/colors";
-import { useBeeMindStore } from "@/store/beemind-store";
+import { useBeeMind } from "@/store/beemind-context";
 import { useLanguage } from "@/store/language-store";
 import type { TaskPriority, TaskScope } from "@/types";
 
 export default function TasksScreen() {
-  const { tasks, updateTask, addTask, deleteTask, hives, yards } = useBeeMindStore();
+  const { tasks, updateTask, addTask, deleteTask, hives, yards } = useBeeMind();
   const { t } = useLanguage();
   const [filter, setFilter] = useState<"all" | "pending" | "completed">("pending");
   const [scopeFilter, setScopeFilter] = useState<"all" | TaskScope>("all");

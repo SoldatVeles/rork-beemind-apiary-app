@@ -15,7 +15,7 @@ import { useRouter } from "expo-router";
 import { MapPin, NotebookPen, Save } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "../../../constants/colors";
-import { useBeeMindStore } from "../../../store/beemind-store";
+import { useBeeMind } from "../../../store/beemind-context";
 import { useLanguage } from "../../../store/language-store";
 
 interface YardFormState {
@@ -29,7 +29,7 @@ interface YardFormState {
 
 export default function AddYardScreen() {
   const router = useRouter();
-  const { addYard } = useBeeMindStore();
+  const { addYard } = useBeeMind();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [formState, setFormState] = useState<YardFormState>({
@@ -78,7 +78,7 @@ export default function AddYardScreen() {
     return parsed;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     console.log("[AddYardScreen] handleSubmit invoked", formState);
 
     if (isSubmitting) {
@@ -115,16 +115,15 @@ export default function AddYardScreen() {
         return;
       }
 
-      const createdId = addYard({
+      const createdYard = await addYard({
         name: formState.name.trim(),
         address: formState.address.trim() || undefined,
         latitude: latitudeValue,
         longitude: longitudeValue,
-        elevation_m: elevationValue,
         notes: formState.notes.trim() || undefined,
       });
 
-      console.log("[AddYardScreen] yard created", { id: createdId });
+      console.log("[AddYardScreen] yard created", { id: createdYard.id });
 
       setFormState({
         name: "",
@@ -139,7 +138,7 @@ export default function AddYardScreen() {
         {
           text: t.common.view ?? "View",
           onPress: () => {
-            router.replace({ pathname: "/(tabs)/yards/[id]", params: { id: createdId } });
+            router.replace({ pathname: "/(tabs)/yards/[id]", params: { id: createdYard.id } });
           },
         },
         {

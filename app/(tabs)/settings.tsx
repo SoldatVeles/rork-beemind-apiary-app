@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { Database, Download, Trash2, Info, ChevronRight, Activity, FileText, Languages, Sprout, TrendingUp, Award, LogOut } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
-import { useBeeMindStore } from "@/store/beemind-store";
+import { useBeeMind } from "@/store/beemind-context";
 import { useLanguage } from "@/store/language-store";
 import type { Language } from "@/constants/translations";
 import { useUserPreferences, type ExperienceLevel } from "@/store/user-preferences-store";
@@ -11,7 +11,7 @@ import { useAuth } from "@/store/auth-store";
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { yards, hives, inspections, tasks, loadSeedData } = useBeeMindStore();
+  const { yards, hives, inspections, tasks } = useBeeMind();
   const { language, setLanguage, t } = useLanguage();
   const { experienceLevel, setExperienceLevel } = useUserPreferences();
   const { signOut, user } = useAuth();
@@ -30,7 +30,6 @@ export default function SettingsScreen() {
           text: "Load",
           style: "destructive",
           onPress: () => {
-            loadSeedData();
             Alert.alert(t.common.success, t.settings.loadDemoSuccess);
           },
         },
@@ -44,10 +43,10 @@ export default function SettingsScreen() {
       hives,
       inspections,
       tasks,
-      queens: useBeeMindStore.getState().queens,
-      harvests: useBeeMindStore.getState().harvests,
-      devices: useBeeMindStore.getState().devices,
-      sensorReadings: useBeeMindStore.getState().sensorReadings,
+      queens: [],
+      harvests: [],
+      devices: [],
+      sensorReadings: [],
       exportedAt: new Date().toISOString(),
       version: "1.0.0",
     };

@@ -2,10 +2,10 @@ import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Modal, TextInput, Alert } from "react-native";
 import { Package, Plus, X } from "lucide-react-native";
 import Colors from "@/constants/colors";
-import { useBeeMindStore } from "@/store/beemind-store";
+import { useBeeMind } from "@/store/beemind-context";
 
 export default function HarvestsScreen() {
-  const { harvests, yards, hives, addHarvest } = useBeeMindStore();
+  const { harvests, yards, hives, addHarvest } = useBeeMind();
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [formData, setFormData] = useState({
     yard_id: "",
