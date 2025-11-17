@@ -1,8 +1,11 @@
 import { Platform } from "react-native";
 
-const MapLocationPicker = Platform.select({
-  web: require("./MapLocationPicker.web").default,
-  default: require("./MapLocationPicker.native").default,
-});
+let MapLocationPicker: any;
+
+if (Platform.OS === "web") {
+  MapLocationPicker = require("./MapLocationPicker.web").default;
+} else {
+  MapLocationPicker = require("./MapLocationPicker.native").default;
+}
 
 export default MapLocationPicker;
