@@ -160,85 +160,86 @@ export default function OnboardingScreen() {
     );
   }
 
-  return (
-    <SafeAreaView style={styles.flex} edges={["top", "bottom"]}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Welcome to BeeMind! 🐝</Text>
-        <Text style={styles.subtitle}>
-          Choose your experience level to customize your beekeeping journey
-        </Text>
-      </View>
+  if (step === "level") {
+    return (
+      <SafeAreaView style={styles.flex} edges={["top", "bottom"]}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Welcome to BeeMind! 🐝</Text>
+          <Text style={styles.subtitle}>
+            Choose your experience level to customize your beekeeping journey
+          </Text>
+        </View>
 
-      {levels.map((option) => {
-        const Icon = option.icon;
-        const isSelected = selectedLevel === option.level;
+        {levels.map((option) => {
+          const Icon = option.icon;
+          const isSelected = selectedLevel === option.level;
 
-        return (
-          <TouchableOpacity
-            key={option.level}
-            style={[
-              styles.levelCard,
-              isSelected && styles.levelCardSelected,
-              { borderColor: isSelected ? option.color : Colors.light.border },
-            ]}
-            onPress={() => setSelectedLevel(option.level)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.levelHeader}>
-              <View
-                style={[
-                  styles.iconContainer,
-                  { backgroundColor: option.color + "20" },
-                ]}
-              >
-                <Icon size={32} color={option.color} />
-              </View>
-              <View style={styles.levelInfo}>
-                <Text style={styles.levelTitle}>{option.title}</Text>
-                <Text style={styles.levelDescription}>{option.description}</Text>
-              </View>
-              {isSelected && (
-                <CheckCircle size={24} color={option.color} style={styles.checkIcon} />
-              )}
-            </View>
-
-            <View style={styles.featuresContainer}>
-              {option.features.map((feature, index) => (
-                <View key={index} style={styles.featureRow}>
-                  <View
-                    style={[
-                      styles.featureDot,
-                      { backgroundColor: option.color },
-                    ]}
-                  />
-                  <Text style={styles.featureText}>{feature}</Text>
+          return (
+            <TouchableOpacity
+              key={option.level}
+              style={[
+                styles.levelCard,
+                isSelected && styles.levelCardSelected,
+                { borderColor: isSelected ? option.color : Colors.light.border },
+              ]}
+              onPress={() => setSelectedLevel(option.level)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.levelHeader}>
+                <View
+                  style={[
+                    styles.iconContainer,
+                    { backgroundColor: option.color + "20" },
+                  ]}
+                >
+                  <Icon size={32} color={option.color} />
                 </View>
-              ))}
-            </View>
-          </TouchableOpacity>
-        );
-      })}
+                <View style={styles.levelInfo}>
+                  <Text style={styles.levelTitle}>{option.title}</Text>
+                  <Text style={styles.levelDescription}>{option.description}</Text>
+                </View>
+                {isSelected && (
+                  <CheckCircle size={24} color={option.color} style={styles.checkIcon} />
+                )}
+              </View>
 
-      <TouchableOpacity
-        style={[
-          styles.continueButton,
-          !selectedLevel && styles.continueButtonDisabled,
-        ]}
-        onPress={handleLevelContinue}
-        disabled={!selectedLevel}
-      >
-        <Text style={styles.continueButtonText}>
-          {t.common?.continue || "Continue"}
-        </Text>
-      </TouchableOpacity>
+              <View style={styles.featuresContainer}>
+                {option.features.map((feature, index) => (
+                  <View key={index} style={styles.featureRow}>
+                    <View
+                      style={[
+                        styles.featureDot,
+                        { backgroundColor: option.color },
+                      ]}
+                    />
+                    <Text style={styles.featureText}>{feature}</Text>
+                  </View>
+                ))}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
 
-        <Text style={styles.footerNote}>
-          💡 Don&apos;t worry! You can always change your level later in Settings.
-        </Text>
-      </ScrollView>
-    </SafeAreaView>
-  );
+        <TouchableOpacity
+          style={[
+            styles.continueButton,
+            !selectedLevel && styles.continueButtonDisabled,
+          ]}
+          onPress={handleLevelContinue}
+          disabled={!selectedLevel}
+        >
+          <Text style={styles.continueButtonText}>
+            {t.common?.continue || "Continue"}
+          </Text>
+        </TouchableOpacity>
+
+          <Text style={styles.footerNote}>
+            💡 Don&apos;t worry! You can always change your level later in Settings.
+          </Text>
+        </ScrollView>
+      </SafeAreaView>
+    );
   }
 
   if (step === "yardName") {
@@ -285,6 +286,7 @@ export default function OnboardingScreen() {
       </SafeAreaView>
     );
   }
+}
 
 const styles = StyleSheet.create({
   flex: {
