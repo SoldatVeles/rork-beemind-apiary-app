@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import * as Updates from "expo-updates";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { LanguageProvider, useLanguage } from "@/store/language-store";
@@ -37,6 +38,32 @@ function RootLayoutNav() {
 
 function AppContent() {
   const { isLoading } = useLanguage();
+
+  useEffect(() => {
+    async function setupApp() {
+      try {
+        if (__DEV__) {
+          console.log('[App] Running in development mode');
+        }
+        
+        if (!__DEV__ && Updates.isEnabled) {
+          try {
+            const update = await Updates.checkForUpdateAsync();
+            if (update.isAvailable) {
+              await Updates.fetchUpdateAsync();
+              await Updates.reloadAsync();
+            }
+          } catch (updateError) {
+            console.log('[App] Update check failed:', updateError);
+          }
+        }
+      } catch (error) {
+        console.error('[App] Setup error:', error);
+      }
+    }
+    
+    setupApp();
+  }, []);
 
   useEffect(() => {
     if (!isLoading) {
