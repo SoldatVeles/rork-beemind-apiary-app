@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -12,6 +13,7 @@ import { Sprout, TrendingUp, Award, CheckCircle, Globe } from "lucide-react-nati
 import Colors from "@/constants/colors";
 import { useUserPreferences, type ExperienceLevel } from "@/store/user-preferences-store";
 import { useLanguage, type Language } from "@/store/language-store";
+import { useBeeMindStore } from "@/store/beemind-store";
 
 interface LevelOption {
   level: ExperienceLevel;
@@ -26,8 +28,10 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const { setExperienceLevel, completeOnboarding } = useUserPreferences();
   const { t, language, setLanguage } = useLanguage();
-  const [step, setStep] = useState<"language" | "level">("language");
+  const { addYard } = useBeeMindStore();
+  const [step, setStep] = useState<"language" | "level" | "yardName">("language");
   const [selectedLevel, setSelectedLevel] = useState<ExperienceLevel | null>(null);
+  const [yardName, setYardName] = useState<string>("");
 
   const languages: { code: Language; name: string; flag: string }[] = [
     { code: "en", name: "English", flag: "🇬🇧" },
@@ -85,14 +89,33 @@ export default function OnboardingScreen() {
     setStep("level");
   };
 
-  const handleContinue = () => {
+  const handleLevelContinue = () => {
     if (!selectedLevel) {
       console.log("[Onboarding] Continue tapped without level selection");
       return;
     }
 
+    if (selectedLevel === "beginner") {
+      setStep("yardName");
+    } else {
+      console.log("[Onboarding] Setting experience level", selectedLevel);
+      setExperienceLevel(selectedLevel);
+      completeOnboarding();
+      router.replace("/(tabs)/home");
+    }
+  };
+
+  const handleYardNameContinue = () => {
+    const finalYardName = yardName.trim() || "My Apiary";
+    
+    console.log("[Onboarding] Creating first yard:", finalYardName);
+    addYard({
+      name: finalYardName,
+      address: "",
+    });
+    
     console.log("[Onboarding] Setting experience level", selectedLevel);
-    setExperienceLevel(selectedLevel);
+    setExperienceLevel(selectedLevel!);
     completeOnboarding();
     router.replace("/(tabs)/home");
   };
@@ -202,11 +225,11 @@ export default function OnboardingScreen() {
           styles.continueButton,
           !selectedLevel && styles.continueButtonDisabled,
         ]}
-        onPress={handleContinue}
+        onPress={handleLevelContinue}
         disabled={!selectedLevel}
       >
         <Text style={styles.continueButtonText}>
-          {t.common?.continue || "Continue to BeeMind"}
+          {t.common?.continue || "Continue"}
         </Text>
       </TouchableOpacity>
 
@@ -216,7 +239,52 @@ export default function OnboardingScreen() {
       </ScrollView>
     </SafeAreaView>
   );
-}
+  }
+
+  if (step === "yardName") {
+    return (
+      <SafeAreaView style={styles.flex} edges={["top", "bottom"]}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <View style={styles.header}>
+            <View style={styles.iconContainer2}>
+              <Sprout size={48} color={Colors.light.primary} />
+            </View>
+            <Text style={styles.title}>{t.onboarding?.nameYourFirstYard || "Name Your First Yard"}</Text>
+            <Text style={styles.subtitle}>
+              {t.onboarding?.nameYourFirstYardDesc || "As a beginner, you'll start with one apiary. What would you like to call it?"}
+            </Text>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>
+              {t.yards?.yardName || "Yard Name"}
+            </Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder={t.yards?.yardNamePlaceholder || "e.g., My Backyard, Garden Apiary"}
+              placeholderTextColor={Colors.light.tabIconDefault}
+              value={yardName}
+              onChangeText={setYardName}
+              autoFocus
+            />
+          </View>
+
+          <TouchableOpacity
+            style={styles.continueButton}
+            onPress={handleYardNameContinue}
+          >
+            <Text style={styles.continueButtonText}>
+              {t.common?.continue || "Start Beekeeping"}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.footerNote}>
+            💡 {t.onboarding?.yardNameHint || "You can add more yards later as you expand your beekeeping operation."}
+          </Text>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
 const styles = StyleSheet.create({
   flex: {
@@ -370,5 +438,23 @@ const styles = StyleSheet.create({
     fontWeight: "600" as const,
     color: Colors.light.text,
     flex: 1,
+  },
+  inputContainer: {
+    marginBottom: 24,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: Colors.light.card,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: Colors.light.text,
+    borderWidth: 2,
+    borderColor: Colors.light.border,
   },
 });
