@@ -1,0 +1,13 @@
+# Supabase Configuration
+# Get these from: https://supabase.com/dashboard/project/YOUR_PROJECT/settings/api
+
+# Your Supabase project URL
+SUPABASE_URL=https://dnoqtpdgdhxemaymidjv.supabase.co
+
+# Anon/Public key - safe to use in client-side code
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRub3F0cGRnZGh4ZW1heW1pZGp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzMzY5MjYsImV4cCI6MjA3ODkxMjkyNn0.ffL_q_QbRuQVnT6wYsI0N9uGRCH-IMRELcspDGDXkN4
+
+# Service Role key - NEVER expose this in client-side code! Only for backend.
+# This key bypasses Row Level Security (RLS)
+# Paste your service_role key here (from Project Settings > API > service_role key)
+SUPABASE_SERVICE_ROLE_KEY=paste_your_service_role_key_here
