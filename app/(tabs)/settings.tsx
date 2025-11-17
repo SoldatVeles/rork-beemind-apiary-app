@@ -1,18 +1,20 @@
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Alert } from "react-native";
 import { useEffect } from "react";
-import { Database, Download, Trash2, Info, ChevronRight, Activity, FileText, Languages, Sprout, TrendingUp, Award } from "lucide-react-native";
+import { Database, Download, Trash2, Info, ChevronRight, Activity, FileText, Languages, Sprout, TrendingUp, Award, LogOut } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import { useBeeMindStore } from "@/store/beemind-store";
 import { useLanguage } from "@/store/language-store";
 import type { Language } from "@/constants/translations";
 import { useUserPreferences, type ExperienceLevel } from "@/store/user-preferences-store";
+import { useAuth } from "@/store/auth-store";
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { yards, hives, inspections, tasks, loadSeedData } = useBeeMindStore();
   const { language, setLanguage, t } = useLanguage();
   const { experienceLevel, setExperienceLevel } = useUserPreferences();
+  const { signOut, user } = useAuth();
 
   useEffect(() => {
     console.log("[Settings] Component rendered with experienceLevel:", experienceLevel);
@@ -317,12 +319,49 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t.settings.supabaseIntegration}</Text>
-        <View style={styles.infoCard}>
-          <Text style={styles.infoText}>
-            {t.settings.supabaseText}
+        <Text style={styles.sectionTitle}>{t.settings.account || "Account"}</Text>
+        {user && (
+          <View style={styles.infoCard}>
+            <Text style={styles.infoText}>
+              {user.email}
+            </Text>
+          </View>
+        )}
+        <TouchableOpacity
+          style={[styles.menuItem, { borderColor: Colors.light.error, borderWidth: 1 }]}
+          onPress={() => {
+            Alert.alert(
+              t.settings.signOutConfirm || "Sign Out",
+              t.settings.signOutMessage || "Are you sure you want to sign out?",
+              [
+                { text: t.common.cancel, style: "cancel" },
+                {
+                  text: t.settings.signOut || "Sign Out",
+                  style: "destructive",
+                  onPress: async () => {
+                    try {
+                      await signOut();
+                      router.replace("/login" as any);
+                    } catch (error) {
+                      Alert.alert(
+                        t.common.error || "Error",
+                        error instanceof Error ? error.message : "Failed to sign out"
+                      );
+                    }
+                  },
+                },
+              ]
+            );
+          }}
+        >
+          <View style={styles.menuIcon}>
+            <LogOut size={20} color={Colors.light.error} />
+          </View>
+          <Text style={[styles.menuText, { color: Colors.light.error }]}>
+            {t.settings.signOut || "Sign Out"}
           </Text>
-        </View>
+          <ChevronRight size={20} color={Colors.light.tabIconDefault} />
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
