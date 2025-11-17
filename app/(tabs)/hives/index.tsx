@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
-  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -112,30 +111,7 @@ export default function HivesScreen() {
     }
   };
 
-  const openHiveInMaps = (hive: Hive) => {
-    const location = getHiveLocation(hive);
 
-    if (!location) {
-      Alert.alert("Location unavailable", "Please add latitude and longitude to this hive or its yard first.");
-      return;
-    }
-
-    const scheme = Platform.select({
-      ios: "maps:0,0?q=",
-      android: "geo:0,0?q=",
-      default: "https://www.google.com/maps/search/?api=1&query=",
-    });
-
-    const latLng = `${location.latitude},${location.longitude}`;
-    const url = Platform.select({
-      ios: `${scheme}${hive.label}@${latLng}`,
-      android: `${scheme}${latLng}(${hive.label})`,
-      default: `${scheme}${latLng}`,
-    });
-
-    console.log("[HivesScreen] opening maps", { hiveId: hive.id, latLng, source: location.source, url });
-    Linking.openURL(url);
-  };
 
   const parseCoordinate = (value: string) => {
     if (!value.trim()) {
@@ -339,7 +315,7 @@ export default function HivesScreen() {
           <View style={styles.webMapContainer}>
             <Text style={styles.mapPlaceholder}>🗺️ Hive Locations</Text>
             <Text style={styles.mapSubtext}>
-              Tap any hive below to open its location in your device&apos;s map app
+              Tap any hive below to view its details and location
             </Text>
             <ScrollView style={styles.hivesListInMap}>
               {hivesWithLocation.map((hive) => {
@@ -353,7 +329,11 @@ export default function HivesScreen() {
                   <TouchableOpacity
                     key={hive.id}
                     style={styles.hiveInMapButton}
-                    onPress={() => openHiveInMaps(hive)}
+                    onPress={() => {
+                      console.log("[HivesScreen] opening hive detail from map list", { hiveId: hive.id });
+                      setMapModalVisible(false);
+                      router.push({ pathname: "/(tabs)/hives/[id]", params: { id: hive.id } });
+                    }}
                     activeOpacity={0.85}
                     testID={`map-list-${hive.id}`}
                   >
