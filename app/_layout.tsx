@@ -6,6 +6,7 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { LanguageProvider, useLanguage } from "@/store/language-store";
 import { AuthProvider } from "@/store/auth-store";
+import { BeeMindProvider } from "@/store/beemind-context";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { trpc, trpcClient } from "@/lib/trpc";
 
@@ -55,7 +56,9 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <LanguageProvider>
-            <AppContent />
+            <BeeMindProvider>
+              <AppContent />
+            </BeeMindProvider>
           </LanguageProvider>
         </AuthProvider>
       </QueryClientProvider>
