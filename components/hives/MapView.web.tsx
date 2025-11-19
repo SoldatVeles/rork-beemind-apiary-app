@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
-import MapView, { Marker, PROVIDER_DEFAULT, type Region } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
 import { AlertTriangle, Compass, MapPin } from "lucide-react-native";
 import Colors from "../../constants/colors";
 
@@ -18,12 +18,13 @@ export default function MapViewComponent({ latitude, longitude, label, descripti
   const [hasError, setHasError] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const region = useMemo<Region>(() => ({
-    latitude,
-    longitude,
-    latitudeDelta: 0.02,
-    longitudeDelta: 0.02,
-  }), [latitude, longitude]);
+  const staticMapUrl = useMemo(() => {
+    const zoomLevel = 15;
+    const size = "640x480";
+    const markerColor = "red";
+    const marker = `${latitude},${longitude},${markerColor}`;
+    return `https://staticmap.openstreetmap.de/staticmap.php?center=${latitude},${longitude}&zoom=${zoomLevel}&size=${size}&markers=${marker}`;
+  }, [latitude, longitude]);
 
   const formattedCoordinates = useMemo(() => ({
     lat: latitude.toFixed(4),
@@ -33,28 +34,23 @@ export default function MapViewComponent({ latitude, longitude, label, descripti
   return (
     <View style={styles.wrapper} testID="map-preview-web">
       {!hasError ? (
-        <MapView
+        <Image
+          source={{ uri: staticMapUrl }}
           style={styles.map}
-          provider={PROVIDER_DEFAULT}
-          initialRegion={region}
-          zoomControlEnabled
-          scrollEnabled
-          pitchEnabled
-          rotateEnabled
-          onMapReady={() => setIsLoading(false)}
+          contentFit="cover"
+          onLoadStart={() => {
+            setIsLoading(true);
+          }}
+          onLoad={() => {
+            console.log("[HiveMapWeb] Static map image loaded");
+            setIsLoading(false);
+          }}
           onError={(event) => {
-            console.log("[HiveMapWeb] Map failed to load", event.nativeEvent);
+            console.log("[HiveMapWeb] Static map failed to load", event);
             setIsLoading(false);
             setHasError(true);
           }}
-        >
-          <Marker
-            coordinate={{ latitude, longitude }}
-            title={label}
-            description={description}
-            identifier="hive-location-web"
-          />
-        </MapView>
+        />
       ) : (
         <View style={styles.errorState}>
           <AlertTriangle size={28} color={Colors.light.error} />
@@ -65,7 +61,7 @@ export default function MapViewComponent({ latitude, longitude, label, descripti
       {isLoading && !hasError ? (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="small" color={Colors.light.primary} />
-          <Text style={styles.loadingText}>Loading map tiles…</Text>
+          <Text style={styles.loadingText}>Loading map preview…</Text>
         </View>
       ) : null}
       <LinearGradient
