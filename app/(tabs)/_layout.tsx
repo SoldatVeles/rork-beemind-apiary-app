@@ -57,7 +57,7 @@ export default function TabLayout() {
         options={{
           title: t.tabs.yards,
           tabBarIcon: ({ color }) => <MapPin size={24} color={color} />,
-          href: isIntermediateOrHigher ? "/(tabs)/yards" : null,
+          href: "/(tabs)/yards",
         }}
       />
       <Tabs.Screen
