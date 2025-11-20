@@ -24,6 +24,13 @@ export default function YardsScreen() {
   const { t } = useLanguage();
   const [mapModalVisible, setMapModalVisible] = useState<boolean>(false);
 
+  const formatCountCopy = (template?: string, count?: number) => {
+    if (!template || typeof count !== "number") {
+      return undefined;
+    }
+    return template.replace("{{count}}", String(count));
+  };
+
   const yardsWithLocation = useMemo(() => {
     return yards.filter((yard) => typeof yard.latitude === "number" && typeof yard.longitude === "number");
   }, [yards]);
@@ -105,7 +112,7 @@ export default function YardsScreen() {
             <Text style={styles.heroTitle}>{t.yards.titleHero ?? "Apiary yards"}</Text>
             <Text style={styles.heroSubtitle}>
               {hasYards
-                ? t.yards.heroSubtitleWithCount?.replace("{count}", String(yards.length)) ?? `${yards.length} curated locations to anchor your colonies.`
+                ? formatCountCopy(t.yards.heroSubtitleWithCount, yards.length) ?? `${yards.length} curated locations to anchor your colonies.`
                 : t.yards.heroSubtitleEmpty ?? "Designate your first apiary hub with coordinates, notes, and context."}
             </Text>
           </View>
@@ -149,9 +156,8 @@ export default function YardsScreen() {
               <Text style={styles.mapPreviewTitle}>{t.yards.viewMap ?? "View yards on map"}</Text>
             </View>
             <Text style={styles.mapPreviewSubtitle}>
-              {t.yards.mapPreviewSubtitle
-                ? t.yards.mapPreviewSubtitle.replace("{count}", String(yardsWithLocation.length))
-                : `${yardsWithLocation.length} ${yardsWithLocation.length === 1 ? "yard" : "yards"} with precise coordinates`}
+              {formatCountCopy(t.yards.mapPreviewSubtitle, yardsWithLocation.length) ??
+                `${yardsWithLocation.length} ${yardsWithLocation.length === 1 ? "yard" : "yards"} with precise coordinates`}
             </Text>
           </TouchableOpacity>
         )}
