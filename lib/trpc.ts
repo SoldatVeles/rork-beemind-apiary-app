@@ -1,5 +1,6 @@
 import { createTRPCReact } from "@trpc/react-query";
 import { httpLink } from "@trpc/client";
+import Constants from "expo-constants";
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
 import { supabase } from "@/lib/supabase";
@@ -7,18 +8,33 @@ import { supabase } from "@/lib/supabase";
 export const trpc = createTRPCReact<AppRouter>();
 
 const getBaseUrl = () => {
-  if (process.env.EXPO_PUBLIC_RORK_API_BASE_URL) {
-    return process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+  const expoExtra = Constants.expoConfig?.extra as
+    | Record<string, unknown>
+    | undefined;
+  const manifestExtra = Constants.manifest2?.extra as
+    | Record<string, unknown>
+    | undefined;
+
+  const envUrl =
+    process.env.EXPO_PUBLIC_RORK_API_BASE_URL ||
+    (expoExtra?.apiUrl as string | undefined) ||
+    (manifestExtra?.apiUrl as string | undefined);
+
+  if (envUrl) {
+    return envUrl;
   }
 
-  throw new Error(
-    "No base url found, please set EXPO_PUBLIC_RORK_API_BASE_URL"
-  );
+  if (typeof window !== "undefined" && window.location.origin) {
+    return window.location.origin;
+  }
+
+  return "http://127.0.0.1:8787";
 };
 
-const REQUEST_TIMEOUT_MS = 20000;
+const REQUEST_TIMEOUT_MS = 45000;
+const MAX_FETCH_RETRIES = 2;
 
-const fetchWithTimeout = async (
+const performTimedFetch = async (
   url: RequestInfo | URL,
   options?: RequestInit
 ): Promise<Response> => {
@@ -50,14 +66,44 @@ const fetchWithTimeout = async (
       ...restOptions,
       signal: controller.signal,
     });
-  } catch (error) {
-    if ((error as Error).name === "AbortError") {
-      console.warn("[tRPC] Request aborted after timeout");
-    }
-    throw error;
   } finally {
     clearTimeout(timeoutId);
   }
+};
+
+const fetchWithResilience = async (
+  url: RequestInfo | URL,
+  options?: RequestInit
+): Promise<Response> => {
+  let attempt = 0;
+  let lastError: unknown;
+
+  while (attempt <= MAX_FETCH_RETRIES) {
+    try {
+      const response = await performTimedFetch(url, options);
+      return response;
+    } catch (error) {
+      lastError = error;
+      const errorName = (error as Error).name;
+      const isRetryable = errorName === "AbortError" || errorName === "TypeError";
+
+      if (!isRetryable || attempt === MAX_FETCH_RETRIES) {
+        console.error("[tRPC] Network request failed", {
+          attempt,
+          error: error instanceof Error ? error.message : error,
+        });
+        throw error;
+      }
+
+      const backoffDelay = 300 * 2 ** attempt;
+      console.warn("[tRPC] Request retrying", { attempt: attempt + 1, backoffDelay });
+      await new Promise((resolve) => setTimeout(resolve, backoffDelay));
+    }
+
+    attempt += 1;
+  }
+
+  throw lastError ?? new Error("[tRPC] Unknown network failure");
 };
 
 export const createTrpcClient = () => {
@@ -68,19 +114,23 @@ export const createTrpcClient = () => {
         transformer: superjson,
         async headers() {
           try {
-            const { data: { session } } = await supabase.auth.getSession();
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
             return {
-              authorization: session?.access_token ? `Bearer ${session.access_token}` : "",
+              authorization: session?.access_token
+                ? `Bearer ${session.access_token}`
+                : "",
             };
           } catch (error) {
-            console.error('[tRPC] Error getting session:', error);
+            console.error("[tRPC] Error getting session:", error);
             return {
               authorization: "",
             };
           }
         },
         async fetch(url, options) {
-          return fetchWithTimeout(url, options);
+          return fetchWithResilience(url, options);
         },
       }),
     ],
