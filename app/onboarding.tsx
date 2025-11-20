@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -33,10 +34,22 @@ export default function OnboardingScreen() {
   const [selectedLevel, setSelectedLevel] = useState<ExperienceLevel | null>(null);
   const [yardName, setYardName] = useState<string>("");
 
-  const languages: { code: Language; name: string; flag: string }[] = [
-    { code: "en", name: "English", flag: "🇬🇧" },
-    { code: "es", name: "Español", flag: "🇪🇸" },
-    { code: "pt", name: "Português", flag: "🇵🇹" },
+  const languages: { code: Language; name: string; flagUri: string }[] = [
+    {
+      code: "en",
+      name: "English",
+      flagUri: "https://flagcdn.com/w80/gb.png",
+    },
+    {
+      code: "es",
+      name: "Español",
+      flagUri: "https://flagcdn.com/w80/es.png",
+    },
+    {
+      code: "pt",
+      name: "Português",
+      flagUri: "https://flagcdn.com/w80/pt.png",
+    },
   ];
 
   const levels: LevelOption[] = [
@@ -143,8 +156,11 @@ export default function OnboardingScreen() {
               ]}
               onPress={() => handleLanguageSelect(lang.code)}
               activeOpacity={0.7}
+              testID={`language-option-${lang.code}`}
             >
-              <Text style={styles.flagIcon}>{lang.flag}</Text>
+              <View style={styles.flagContainer}>
+                <Image source={{ uri: lang.flagUri }} style={styles.flagImage} />
+              </View>
               <Text style={styles.languageName}>{lang.name}</Text>
               {language === lang.code && (
                 <CheckCircle size={24} color={Colors.light.primary} />
@@ -431,9 +447,20 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  flagIcon: {
-    fontSize: 40,
+  flagContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: "hidden" as const,
     marginRight: 16,
+    borderWidth: 2,
+    borderColor: Colors.light.border,
+    backgroundColor: Colors.light.card,
+  },
+  flagImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
   languageName: {
     fontSize: 20,

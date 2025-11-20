@@ -158,6 +158,8 @@ export const translations = {
       viewMap: "View All Yards on Map",
       allYards: "All Yards",
       hasLocation: "Has location",
+      yardName: "Yard Name",
+      yardNamePlaceholder: "e.g., My Backyard, Garden Apiary",
     },
     hives: {
       title: "Hives",
@@ -409,6 +411,9 @@ export const translations = {
       intermediateDesc: "Managing a growing apiary",
       advanced: "Advanced",
       advancedDesc: "Professional beekeeper",
+      nameYourFirstYard: "Name Your First Yard",
+      nameYourFirstYardDesc: "As a beginner, you'll start with one apiary. What would you like to call it?",
+      yardNameHint: "You can add more yards later as you expand your beekeeping operation.",
     },
   },
   es: {
@@ -568,6 +573,8 @@ export const translations = {
       viewMap: "Ver Todos los Apiarios en el Mapa",
       allYards: "Todos los Apiarios",
       hasLocation: "Tiene ubicación",
+      yardName: "Nombre del Apiario",
+      yardNamePlaceholder: "ej., Mi Patio, Apiario del Jardín",
     },
     hives: {
       title: "Colmenas",
@@ -819,6 +826,9 @@ export const translations = {
       intermediateDesc: "Gestionando un apiario en crecimiento",
       advanced: "Avanzado",
       advancedDesc: "Apicultor profesional",
+      nameYourFirstYard: "Nombra tu primer apiario",
+      nameYourFirstYardDesc: "Como principiante, comenzarás con un solo apiario. ¿Cómo quieres llamarlo?",
+      yardNameHint: "Puedes agregar más apiarios más adelante conforme crezcas.",
     },
   },
   pt: {
@@ -978,6 +988,8 @@ export const translations = {
       viewMap: "Ver Todos os Apiários no Mapa",
       allYards: "Todos os Apiários",
       hasLocation: "Tem localização",
+      yardName: "Nome do Apiário",
+      yardNamePlaceholder: "ex., Meu Quintal, Apiário do Jardim",
     },
     hives: {
       title: "Colmeias",
@@ -1229,6 +1241,9 @@ export const translations = {
       intermediateDesc: "Gerenciando um apiário em crescimento",
       advanced: "Avançado",
       advancedDesc: "Apicultor profissional",
+      nameYourFirstYard: "Dê nome ao seu primeiro apiário",
+      nameYourFirstYardDesc: "Como iniciante, você começará com um único apiário. Como deseja chamá-lo?",
+      yardNameHint: "Você pode adicionar mais apiários conforme expandir.",
     },
   },
 };
