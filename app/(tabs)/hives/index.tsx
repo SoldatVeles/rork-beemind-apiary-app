@@ -17,6 +17,7 @@ import Colors from "../../../constants/colors";
 import { useBeeMindStore } from "../../../store/beemind-store";
 import type { Hive, HiveStatus } from "../../../types";
 import MapLocationPicker from "@/components/hives/MapLocationPicker";
+import { useBeeMind } from "@/store/beemind-context";
 
 interface HiveFormState {
   yard_id: string;
@@ -38,7 +39,9 @@ interface HiveLocation {
 export default function HivesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { hives, yards, addHive } = useBeeMindStore();
+  const { hives, yards: localYards, addHive } = useBeeMindStore();
+  const { yards: remoteYards } = useBeeMind();
+  const yards = useMemo(() => (remoteYards.length > 0 ? remoteYards : localYards), [remoteYards, localYards]);
   const [search, setSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<HiveStatus | "All">("All");
   const [modalVisible, setModalVisible] = useState<boolean>(false);
@@ -529,7 +532,7 @@ export default function HivesScreen() {
         <MapLocationPicker
           initialLatitude={formData.latitude ? parseFloat(formData.latitude) : undefined}
           initialLongitude={formData.longitude ? parseFloat(formData.longitude) : undefined}
-          onConfirm={(latitude, longitude) => {
+          onConfirm={(latitude: number, longitude: number) => {
             console.log("[HivesScreen] location confirmed", { latitude, longitude });
             setFormData((prev) => ({
               ...prev,

@@ -32,6 +32,7 @@ import { useBeeMindStore } from "../../../store/beemind-store";
 import type { HiveStatus } from "../../../types";
 import MapViewComponent from "@/components/hives/MapView";
 import MapLocationPicker from "@/components/hives/MapLocationPicker";
+import { useBeeMind } from "@/store/beemind-context";
 
 interface HiveEditFormState {
   yard_id: string;
@@ -72,9 +73,10 @@ const parseCoordinate = (value: string) => {
 export default function HiveDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { yards: remoteYards } = useBeeMind();
   const {
     hives,
-    yards,
+    yards: localYards,
     queens,
     inspections,
     tasks,
@@ -86,6 +88,7 @@ export default function HiveDetailScreen() {
     addTreatment,
     deleteTreatment,
   } = useBeeMindStore();
+  const yards = useMemo(() => (remoteYards.length > 0 ? remoteYards : localYards), [remoteYards, localYards]);
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [queenModalVisible, setQueenModalVisible] = useState<boolean>(false);
@@ -1094,7 +1097,7 @@ export default function HiveDetailScreen() {
         <MapLocationPicker
           initialLatitude={editForm.latitude ? parseFloat(editForm.latitude) : undefined}
           initialLongitude={editForm.longitude ? parseFloat(editForm.longitude) : undefined}
-          onConfirm={(latitude, longitude) => {
+          onConfirm={(latitude: number, longitude: number) => {
             console.log("[HiveDetail] location confirmed", { latitude, longitude });
             setEditForm((prev) => ({
               ...prev,
