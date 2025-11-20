@@ -7,6 +7,98 @@ import { supabase } from "@/lib/supabase";
 
 export const trpc = createTRPCReact<AppRouter>();
 
+type ExpoGoExtra = {
+  expoGo?: {
+    developer?: {
+      host?: string;
+    };
+  };
+};
+
+const stripTrailingSlash = (value: string) =>
+  value.endsWith("/") ? value.slice(0, -1) : value;
+
+const parseHostname = (input?: string | null): string | null => {
+  if (!input) {
+    return null;
+  }
+
+  const normalized = (() => {
+    if (input.startsWith("exp")) {
+      return input.replace(/^exp(\+.*)?:\/\//, "http://");
+    }
+
+    if (input.startsWith("ws")) {
+      return input.replace(/^ws(\+.*)?:\/\//, "http://");
+    }
+
+    if (!input.startsWith("http://") && !input.startsWith("https://")) {
+      return `http://${input}`;
+    }
+
+    return input;
+  })();
+
+  try {
+    return new URL(normalized).hostname;
+  } catch {
+    const sanitized = normalized.replace(/^[a-z]+:\/\//, "");
+    const [hostPart] = sanitized.split("/");
+    const [hostname] = hostPart.split(":");
+    return hostname || null;
+  }
+};
+
+const isLocalHostname = (hostname: string) => {
+  if (!hostname) {
+    return false;
+  }
+
+  if (hostname === "localhost" || hostname.startsWith("127.")) {
+    return true;
+  }
+
+  if (hostname.startsWith("10.")) {
+    return true;
+  }
+
+  if (hostname.startsWith("192.168.")) {
+    return true;
+  }
+
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)) {
+    return true;
+  }
+
+  return hostname.endsWith(".local");
+};
+
+const getDevServerBaseUrl = (): string | null => {
+  const legacyManifest = Constants.manifest as { debuggerHost?: string } | null;
+  const manifest2 = Constants.manifest2 as
+    | ({ hostUri?: string; extra?: ExpoGoExtra })
+    | null;
+  const manifest2Extra = manifest2?.extra as ExpoGoExtra | undefined;
+
+  const hostCandidates = [
+    Constants.expoConfig?.hostUri,
+    manifest2?.hostUri,
+    manifest2Extra?.expoGo?.developer?.host,
+    legacyManifest?.debuggerHost,
+  ];
+
+  for (const candidate of hostCandidates) {
+    const hostname = parseHostname(candidate ?? null);
+    if (hostname) {
+      return isLocalHostname(hostname)
+        ? `http://${hostname}:8787`
+        : `https://${hostname}`;
+    }
+  }
+
+  return null;
+};
+
 const getBaseUrl = () => {
   const expoExtra = Constants.expoConfig?.extra as
     | Record<string, unknown>
@@ -21,7 +113,12 @@ const getBaseUrl = () => {
     (manifestExtra?.apiUrl as string | undefined);
 
   if (envUrl) {
-    return envUrl;
+    return stripTrailingSlash(envUrl);
+  }
+
+  const devServerUrl = getDevServerBaseUrl();
+  if (devServerUrl) {
+    return devServerUrl;
   }
 
   if (typeof window !== "undefined" && window.location.origin) {
@@ -30,6 +127,9 @@ const getBaseUrl = () => {
 
   return "http://127.0.0.1:8787";
 };
+
+const API_BASE_URL = getBaseUrl();
+console.log("[tRPC] API base URL:", API_BASE_URL);
 
 const REQUEST_TIMEOUT_MS = 45000;
 const MAX_FETCH_RETRIES = 2;
@@ -110,7 +210,7 @@ export const createTrpcClient = () => {
   return trpc.createClient({
     links: [
       httpLink({
-        url: `${getBaseUrl()}/api/trpc`,
+        url: `${API_BASE_URL}/api/trpc`,
         transformer: superjson,
         async headers() {
           try {
