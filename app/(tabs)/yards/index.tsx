@@ -190,26 +190,9 @@ export default function YardsScreen() {
             <MapPin size={64} color={Colors.light.tabIconDefault} />
             <Text style={styles.emptyTitle}>{t.yards.noYards}</Text>
             <Text style={styles.emptyText}>{t.yards.addFirst}</Text>
-            <TouchableOpacity
-              style={styles.emptyCta}
-              onPress={handleAddYard}
-              activeOpacity={0.85}
-              testID="yards-empty-add-button"
-            >
-              <Text style={styles.emptyCtaLabel}>{t.yards.createYard}</Text>
-            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
-
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={handleAddYard}
-        activeOpacity={0.85}
-        testID="yards-floating-add"
-      >
-        <Plus size={24} color="#0F172A" />
-      </TouchableOpacity>
 
       <Modal
         visible={mapModalVisible}
@@ -432,46 +415,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: 24,
     lineHeight: 22,
-  },
-  emptyCta: {
-    marginTop: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 18,
-    backgroundColor: Colors.light.primary,
-  },
-  emptyCtaLabel: {
-    fontSize: 15,
-    fontWeight: "700" as const,
-    color: "#0F172A",
-  },
-  fab: {
-    position: "absolute",
-    right: 24,
-    bottom: 24 + Platform.select({ ios: 0, android: 0, default: 16 }),
-    width: 62,
-    height: 62,
-    borderRadius: 22,
-    backgroundColor: "#FACC15",
-    alignItems: "center",
-    justifyContent: "center",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.18,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 10,
-      },
-      default: {
-        shadowColor: "rgba(15, 23, 42, 0.18)",
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.2,
-        shadowRadius: 20,
-      },
-    }),
   },
   mapModal: {
     flex: 1,
