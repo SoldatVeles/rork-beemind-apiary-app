@@ -29,13 +29,13 @@ const BEGINNER_FEATURES = [
   "basic_hive_management",
   "simple_inspections",
   "task_tracking",
+  "yard_management",
 ];
 
 const INTERMEDIATE_FEATURES = [
   ...BEGINNER_FEATURES,
   "queen_tracking",
   "harvest_tracking",
-  "yard_management",
 ];
 
 const ADVANCED_FEATURES = [
@@ -45,6 +45,12 @@ const ADVANCED_FEATURES = [
   "treatment_tracking",
   "inventory_management",
 ];
+
+const FEATURE_MATRIX: Record<ExperienceLevel, string[]> = {
+  beginner: BEGINNER_FEATURES,
+  intermediate: INTERMEDIATE_FEATURES,
+  advanced: ADVANCED_FEATURES,
+};
 
 export const useUserPreferences = create<UserPreferencesState>()(
   persist(
@@ -84,9 +90,17 @@ export const useUserPreferences = create<UserPreferencesState>()(
       canAccessFeature: (featureId) => {
         const { experienceLevel, unlockedFeatures } = get();
         
-        if (experienceLevel === "advanced") return true;
+        if (!experienceLevel) {
+          return unlockedFeatures.includes(featureId);
+        }
         
-        return unlockedFeatures.includes(featureId);
+        if (experienceLevel === "advanced") {
+          return true;
+        }
+        
+        const defaults = FEATURE_MATRIX[experienceLevel] ?? [];
+        
+        return unlockedFeatures.includes(featureId) || defaults.includes(featureId);
       },
     }),
     {
