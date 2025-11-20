@@ -16,6 +16,50 @@ const getBaseUrl = () => {
   );
 };
 
+const REQUEST_TIMEOUT_MS = 20000;
+
+const fetchWithTimeout = async (
+  url: RequestInfo | URL,
+  options?: RequestInit
+): Promise<Response> => {
+  if (typeof AbortController === "undefined") {
+    return fetch(url, options);
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, REQUEST_TIMEOUT_MS);
+
+  const { signal: originalSignal, ...restOptions } = options ?? {};
+
+  if (originalSignal) {
+    if (originalSignal.aborted) {
+      controller.abort();
+    } else {
+      const abortHandler = () => {
+        controller.abort();
+        originalSignal.removeEventListener("abort", abortHandler);
+      };
+      originalSignal.addEventListener("abort", abortHandler);
+    }
+  }
+
+  try {
+    return await fetch(url, {
+      ...restOptions,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if ((error as Error).name === "AbortError") {
+      console.warn("[tRPC] Request aborted after timeout");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 export const createTrpcClient = () => {
   return trpc.createClient({
     links: [
@@ -35,11 +79,8 @@ export const createTrpcClient = () => {
             };
           }
         },
-        fetch(url, options) {
-          return fetch(url, {
-            ...options,
-            signal: AbortSignal.timeout(10000),
-          });
+        async fetch(url, options) {
+          return fetchWithTimeout(url, options);
         },
       }),
     ],
