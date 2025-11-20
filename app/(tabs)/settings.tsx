@@ -24,10 +24,11 @@ export default function SettingsScreen() {
   const { language, setLanguage, t } = useLanguage();
   const { experienceLevel, setExperienceLevel } = useUserPreferences();
   const { signOut, user } = useAuth();
+  const currentExperienceLevel: ExperienceLevel = experienceLevel ?? "beginner";
 
   useEffect(() => {
-    console.log("[Settings] Component rendered with experienceLevel:", experienceLevel);
-  }, [experienceLevel]);
+    console.log("[Settings] Component rendered with experienceLevel:", currentExperienceLevel);
+  }, [currentExperienceLevel]);
 
   const handleLoadSeedData = () => {
     Alert.alert(
@@ -120,10 +121,37 @@ export default function SettingsScreen() {
     }
   };
 
+  const applyExperienceLevelChange = (level: ExperienceLevel) => {
+    try {
+      console.log("[Settings] Applying experience level:", level);
+      setExperienceLevel(level);
+      console.log("[Settings] Updated experience level:", useUserPreferences.getState().experienceLevel);
+      Alert.alert(
+        t.common.success || "Success",
+        t.settings.levelChanged || "Experience level updated successfully!"
+      );
+    } catch (error) {
+      console.error("[Settings] Failed to change experience level", error);
+      Alert.alert(
+        t.common.error || "Error",
+        "Unable to update experience level. Please try again."
+      );
+    }
+  };
+
   const handleExperienceLevelChange = (level: ExperienceLevel) => {
-    console.log("[Settings] Current level:", experienceLevel);
+    if (currentExperienceLevel === level) {
+      console.log("[Settings] Selected level is already active. Skipping change.");
+      return;
+    }
+
     console.log("[Settings] Attempting to change to level:", level);
-    
+
+    if (Platform.OS === "web") {
+      applyExperienceLevelChange(level);
+      return;
+    }
+
     Alert.alert(
       t.settings.changeLevelTitle || "Change Experience Level?",
       t.settings.changeLevelMessage || `Switching to ${level} will adjust available features. Continue?`,
@@ -131,12 +159,7 @@ export default function SettingsScreen() {
         { text: t.common.cancel, style: "cancel" },
         {
           text: t.common.confirm || "Confirm",
-          onPress: () => {
-            console.log("[Settings] Calling setExperienceLevel with:", level);
-            setExperienceLevel(level);
-            console.log("[Settings] After setExperienceLevel, current level:", useUserPreferences.getState().experienceLevel);
-            Alert.alert(t.common.success, t.settings.levelChanged || "Experience level updated successfully!");
-          },
+          onPress: () => applyExperienceLevelChange(level),
         },
       ]
     );
@@ -182,11 +205,14 @@ export default function SettingsScreen() {
           {(["beginner", "intermediate", "advanced"] as const).map((level) => {
             const info = getLevelInfo(level);
             const Icon = info.icon;
-            const isActive = experienceLevel === level;
+            const isActive = currentExperienceLevel === level;
 
             return (
               <TouchableOpacity
                 key={level}
+                testID={`experience-level-${level}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isActive }}
                 style={[
                   styles.levelButton,
                   isActive && styles.levelButtonActive,
