@@ -9,10 +9,11 @@ import { useUserPreferences } from "../../store/user-preferences-store";
 export default function TabLayout() {
   const { t } = useLanguage();
   const { experienceLevel } = useUserPreferences();
+  const effectiveExperienceLevel = experienceLevel ?? "beginner";
 
-  const isBeginnerOrHigher = experienceLevel === "beginner" || experienceLevel === "intermediate" || experienceLevel === "advanced";
-  const isIntermediateOrHigher = experienceLevel === "intermediate" || experienceLevel === "advanced";
-  const isAdvanced = experienceLevel === "advanced";
+  const isBeginnerOrHigher = effectiveExperienceLevel === "beginner" || effectiveExperienceLevel === "intermediate" || effectiveExperienceLevel === "advanced";
+  const isIntermediateOrHigher = effectiveExperienceLevel === "intermediate" || effectiveExperienceLevel === "advanced";
+  const isAdvanced = effectiveExperienceLevel === "advanced";
 
   return (
     <Tabs
