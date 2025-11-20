@@ -9,7 +9,9 @@ export const createQueenProcedure = protectedProcedure
       origin: z.string().optional(),
       mark_color: z.string().optional(),
       temperament: z.number().optional(),
-      status: z.enum(["Active", "Dead", "Missing", "Replaced"]).optional(),
+      status: z
+        .enum(["Active", "Superseded", "Lost", "Dead", "Missing", "Replaced"])
+        .optional(),
     })
   )
   .mutation(async ({ ctx, input }) => {

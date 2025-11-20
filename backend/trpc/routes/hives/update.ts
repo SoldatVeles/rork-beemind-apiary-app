@@ -9,7 +9,9 @@ export const updateHiveProcedure = protectedProcedure
       label: z.string().optional(),
       hive_type: z.string().optional(),
       frames: z.number().optional(),
-      status: z.enum(["Active", "Queenless", "Weak", "Dead", "Sold"]).optional(),
+      status: z
+        .enum(["Active", "Split", "Deadout", "Queenless", "Weak", "Dead", "Sold"])
+        .optional(),
       latitude: z.number().optional(),
       longitude: z.number().optional(),
       notes: z.string().optional(),

@@ -5,7 +5,7 @@ export const createInventoryItemProcedure = protectedProcedure
   .input(
     z.object({
       name: z.string(),
-      category: z.enum(["equipment", "feed", "medication", "other"]),
+      category: z.enum(["equipment", "feed", "medication", "packaging", "other"]),
       quantity: z.number(),
       unit: z.string(),
       min_quantity: z.number().optional(),
