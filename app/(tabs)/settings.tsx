@@ -1,9 +1,11 @@
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Alert } from "react-native";
 import { useEffect } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Database, Download, Trash2, Info, ChevronRight, Activity, FileText, Sprout, TrendingUp, Award, LogOut } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import { useBeeMind } from "@/store/beemind-context";
+import { useBeeMindStore } from "@/store/beemind-store";
 import { useLanguage } from "@/store/language-store";
 import type { Language } from "@/constants/translations";
 import { useUserPreferences, type ExperienceLevel } from "@/store/user-preferences-store";
@@ -17,6 +19,7 @@ const languageMeta: Record<Language, { flag: string }> = {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { yards, hives, inspections, tasks } = useBeeMind();
   const { language, setLanguage, t } = useLanguage();
   const { experienceLevel, setExperienceLevel } = useUserPreferences();
@@ -166,7 +169,10 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingTop: 16 + insets.top }]}
+    >
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t.settings.experienceLevel || "Experience Level"}</Text>
         <Text style={styles.sectionDescription}>
@@ -382,7 +388,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   content: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 32,
   },
   section: {
     marginBottom: 32,

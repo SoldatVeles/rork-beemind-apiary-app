@@ -367,6 +367,10 @@ export const translations = {
       changeLevelTitle: "Change Experience Level?",
       changeLevelMessage: "Switching to this level will adjust available features. Continue?",
       levelChanged: "Experience level updated successfully!",
+      account: "Account",
+      signOut: "Sign Out",
+      signOutConfirm: "Sign Out",
+      signOutMessage: "Are you sure you want to sign out?",
     },
     inventory: {
       title: "Inventory",
@@ -773,6 +777,10 @@ export const translations = {
       changeLevelTitle: "¿Cambiar Nivel de Experiencia?",
       changeLevelMessage: "Cambiar a este nivel ajustará las funciones disponibles. ¿Continuar?",
       levelChanged: "¡Nivel de experiencia actualizado exitosamente!",
+      account: "Cuenta",
+      signOut: "Cerrar sesión",
+      signOutConfirm: "Cerrar sesión",
+      signOutMessage: "¿Seguro que deseas cerrar sesión?",
     },
     inventory: {
       title: "Inventario",
@@ -1179,6 +1187,10 @@ export const translations = {
       changeLevelTitle: "Alterar Nível de Experiência?",
       changeLevelMessage: "Mudar para este nível ajustará os recursos disponíveis. Continuar?",
       levelChanged: "Nível de experiência atualizado com sucesso!",
+      account: "Conta",
+      signOut: "Sair",
+      signOutConfirm: "Encerrar sessão",
+      signOutMessage: "Tem certeza de que deseja sair?",
     },
     inventory: {
       title: "Inventário",
