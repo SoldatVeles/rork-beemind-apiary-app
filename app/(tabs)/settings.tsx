@@ -1,6 +1,6 @@
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Alert } from "react-native";
 import { useEffect } from "react";
-import { Database, Download, Trash2, Info, ChevronRight, Activity, FileText, Languages, Sprout, TrendingUp, Award, LogOut } from "lucide-react-native";
+import { Database, Download, Trash2, Info, ChevronRight, Activity, FileText, Sprout, TrendingUp, Award, LogOut } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import { useBeeMind } from "@/store/beemind-context";
@@ -8,6 +8,12 @@ import { useLanguage } from "@/store/language-store";
 import type { Language } from "@/constants/translations";
 import { useUserPreferences, type ExperienceLevel } from "@/store/user-preferences-store";
 import { useAuth } from "@/store/auth-store";
+
+const languageMeta: Record<Language, { flag: string }> = {
+  en: { flag: "🇬🇧" },
+  es: { flag: "🇪🇸" },
+  pt: { flag: "🇵🇹" },
+};
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -221,10 +227,14 @@ export default function SettingsScreen() {
               ]}
               onPress={() => handleLanguageChange(lang)}
             >
-              <Languages
-                size={20}
-                color={language === lang ? "#FFFFFF" : Colors.light.primary}
-              />
+              <View
+                style={[
+                  styles.flagBadge,
+                  language === lang && styles.flagBadgeActive,
+                ]}
+              >
+                <Text style={styles.flagEmoji}>{languageMeta[lang].flag}</Text>
+              </View>
               <Text
                 style={[
                   styles.languageButtonText,
@@ -524,6 +534,23 @@ const styles = StyleSheet.create({
   },
   languageButtonTextActive: {
     color: "#FFFFFF",
+  },
+  flagBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.light.background,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  flagBadgeActive: {
+    backgroundColor: "#FFFFFF20",
+    borderColor: "#FFFFFF80",
+  },
+  flagEmoji: {
+    fontSize: 22,
   },
   levelContainer: {
     gap: 12,
