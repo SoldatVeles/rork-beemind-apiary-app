@@ -23,6 +23,7 @@ import {
   CheckSquare,
   X,
   Pill,
+  Package,
   MapPin,
   MapPinned,
   Navigation,
@@ -52,7 +53,7 @@ interface HiveLocationDetail {
   source: LocationSource;
 }
 
-type TabType = "overview" | "inspections" | "queen" | "tasks" | "treatments";
+type TabType = "overview" | "inspections" | "queen" | "tasks" | "harvests" | "treatments";
 
 const STATUS_OPTIONS: HiveStatus[] = ["Active", "Split", "Deadout"];
 
@@ -79,12 +80,15 @@ export default function HiveDetailScreen() {
     inspections,
     tasks,
     treatments,
+    harvests,
     updateHive,
     deleteHive,
     addQueen,
     updateQueen,
     addTreatment,
     deleteTreatment,
+    addHarvest,
+    deleteHarvest,
   } = useBeeMind();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
@@ -97,6 +101,13 @@ export default function HiveDetailScreen() {
     origin: "",
     mark_color: "",
     temperament: "",
+    notes: "",
+  });
+  const [harvestModalVisible, setHarvestModalVisible] = useState<boolean>(false);
+  const [harvestFormData, setHarvestFormData] = useState({
+    frames_spun: "",
+    weight_kg: "",
+    moisture_pct: "",
     notes: "",
   });
   const [treatmentFormData, setTreatmentFormData] = useState({
@@ -123,6 +134,7 @@ export default function HiveDetailScreen() {
   const hiveInspections = inspections.filter((i) => i.hive_id === id);
   const hiveTasks = tasks.filter((t) => t.hive_id === id);
   const hiveTreatments = treatments.filter((t) => t.hive_id === id);
+  const hiveHarvests = harvests.filter((h) => h.hive_id === id);
 
   const location = useMemo<HiveLocationDetail | null>(() => {
     if (!hive) {
@@ -671,6 +683,83 @@ export default function HiveDetailScreen() {
     );
   };
 
+  const handleAddHarvest = () => {
+    if (!harvestFormData.frames_spun || !harvestFormData.weight_kg) {
+      Alert.alert("Error", "Frames spun and weight are required");
+      return;
+    }
+    const frames = Number.parseInt(harvestFormData.frames_spun, 10);
+    const weight = Number.parseFloat(harvestFormData.weight_kg);
+    const moisture = harvestFormData.moisture_pct ? Number.parseFloat(harvestFormData.moisture_pct) : undefined;
+    if (Number.isNaN(frames) || Number.isNaN(weight)) {
+      Alert.alert("Error", "Please provide valid numeric values");
+      return;
+    }
+    addHarvest({
+      hive_id: id,
+      yard_id: hive?.yard_id,
+      frames_spun: frames,
+      weight_kg: weight,
+      moisture_pct: moisture,
+      notes: harvestFormData.notes.trim() || undefined,
+    });
+    setHarvestFormData({ frames_spun: "", weight_kg: "", moisture_pct: "", notes: "" });
+    setHarvestModalVisible(false);
+    Alert.alert("Success", "Harvest recorded");
+  };
+
+  const handleDeleteHarvest = (harvestId: string) => {
+    Alert.alert("Delete Harvest", "Remove this harvest record?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => deleteHarvest(harvestId),
+      },
+    ]);
+  };
+
+  const renderHarvests = () => (
+    <View>
+      {hiveHarvests.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Package size={48} color={Colors.light.tabIconDefault} />
+          <Text style={styles.emptyText}>No harvests yet</Text>
+        </View>
+      ) : (
+        hiveHarvests
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .map((harvest) => (
+            <View key={harvest.id} style={styles.treatmentCard}>
+              <View style={styles.treatmentHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.treatmentProduct}>{harvest.weight_kg} kg</Text>
+                  <Text style={styles.treatmentDose}>
+                    {harvest.frames_spun} frames • {formatDate(harvest.created_at)}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => handleDeleteHarvest(harvest.id)} testID={`delete-harvest-${harvest.id}`}>
+                  <Trash2 size={20} color={Colors.light.error} />
+                </TouchableOpacity>
+              </View>
+              {typeof harvest.moisture_pct === "number" && (
+                <Text style={styles.treatmentDate}>Moisture: {harvest.moisture_pct}%</Text>
+              )}
+              {harvest.notes ? <Text style={styles.treatmentNotes}>{harvest.notes}</Text> : null}
+            </View>
+          ))
+      )}
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => setHarvestModalVisible(true)}
+        testID="add-harvest-button"
+      >
+        <Plus size={20} color="#FFFFFF" />
+        <Text style={styles.addButtonText}>Add Harvest</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const renderTreatments = () => (
     <View>
       {hiveTreatments.length === 0 ? (
@@ -748,7 +837,7 @@ export default function HiveDetailScreen() {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabs}>
-        {(["overview", "inspections", "queen", "tasks"] as const).map((tab) => (
+        {(["overview", "inspections", "queen", "tasks", "harvests"] as const).map((tab) => (
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
@@ -767,7 +856,79 @@ export default function HiveDetailScreen() {
         {activeTab === "inspections" && renderInspections()}
         {activeTab === "queen" && renderQueen()}
         {activeTab === "tasks" && renderTasks()}
+        {activeTab === "harvests" && renderHarvests()}
       </ScrollView>
+
+      <Modal
+        visible={harvestModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setHarvestModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Harvest</Text>
+              <TouchableOpacity onPress={() => setHarvestModalVisible(false)}>
+                <X size={24} color={Colors.light.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.form} keyboardShouldPersistTaps="handled">
+              <Text style={styles.label}>Frames Spun *</Text>
+              <TextInput
+                style={styles.input}
+                value={harvestFormData.frames_spun}
+                onChangeText={(text) => setHarvestFormData((prev) => ({ ...prev, frames_spun: text }))}
+                keyboardType="numeric"
+                placeholder="e.g., 8"
+                placeholderTextColor={Colors.light.tabIconDefault}
+                testID="harvest-frames-input"
+              />
+              <Text style={styles.label}>Weight (kg) *</Text>
+              <TextInput
+                style={styles.input}
+                value={harvestFormData.weight_kg}
+                onChangeText={(text) => setHarvestFormData((prev) => ({ ...prev, weight_kg: text }))}
+                keyboardType="decimal-pad"
+                placeholder="e.g., 24.5"
+                placeholderTextColor={Colors.light.tabIconDefault}
+                testID="harvest-weight-input"
+              />
+              <Text style={styles.label}>Moisture %</Text>
+              <TextInput
+                style={styles.input}
+                value={harvestFormData.moisture_pct}
+                onChangeText={(text) => setHarvestFormData((prev) => ({ ...prev, moisture_pct: text }))}
+                keyboardType="decimal-pad"
+                placeholder="e.g., 17.5"
+                placeholderTextColor={Colors.light.tabIconDefault}
+              />
+              <Text style={styles.label}>Notes</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={harvestFormData.notes}
+                onChangeText={(text) => setHarvestFormData((prev) => ({ ...prev, notes: text }))}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                placeholder="Quality, color, etc..."
+                placeholderTextColor={Colors.light.tabIconDefault}
+              />
+            </ScrollView>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonSecondary]}
+                onPress={() => setHarvestModalVisible(false)}
+              >
+                <Text style={styles.buttonSecondaryText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.buttonPrimary]} onPress={handleAddHarvest} testID="submit-harvest">
+                <Text style={styles.buttonPrimaryText}>Save Harvest</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={editModalVisible}
