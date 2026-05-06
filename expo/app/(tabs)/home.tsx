@@ -1,5 +1,6 @@
-import React, { useMemo, useRef } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import {
+  Alert,
   Animated,
   Pressable,
   ScrollView,
@@ -18,6 +19,8 @@ import {
   Droplet,
   Hexagon,
   Leaf,
+  MapPin,
+  Plus,
   TrendingUp,
 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -139,7 +142,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const homeStrings = t.home;
-  const { tasks, inspections, hives, harvests } = useBeeMind();
+  const { tasks, inspections, hives, harvests, yards } = useBeeMind();
   const { hasCompletedOnboarding } = useUserPreferences();
 
   console.log(
@@ -237,28 +240,53 @@ export default function HomeScreen() {
     return formatRelativeDate(homeStrings, recent.performed_at);
   }, [homeStrings, inspections]);
 
+  const handleNewInspection = useCallback(() => {
+    if (hives.length === 0) {
+      Alert.alert("Add a hive first", "Create a hive before logging an inspection.");
+      router.push("/(tabs)/hives");
+      return;
+    }
+    router.push({ pathname: "/inspection/new", params: { hive: hives[0].id } });
+  }, [hives, router]);
+
+  const handleAddHive = useCallback(() => {
+    if (yards.length === 0) {
+      Alert.alert("Add a yard first", "Create a yard before adding hives.");
+      router.push("/(tabs)/yards/new");
+      return;
+    }
+    router.push("/(tabs)/hives");
+  }, [router, yards.length]);
+
   const quickActions = useMemo<QuickActionConfig[]>(
     () => [
       {
-        id: "log-inspection",
-        label: homeStrings.quickActions.actions.logInspection.label,
+        id: "add-yard",
+        label: "Add Yard",
+        caption: "Anchor a new apiary location",
+        route: "/(tabs)/yards/new",
+        icon: <MapPin size={20} color={Colors.light.primary} />,
+      },
+      {
+        id: "add-hive",
+        label: "Add Hive",
+        caption: "Create a colony in a yard",
+        route: "/(tabs)/hives",
+        icon: <Hexagon size={20} color={Colors.light.primary} />,
+      },
+      {
+        id: "new-inspection",
+        label: "New Inspection",
         caption: homeStrings.quickActions.actions.logInspection.caption,
         route: "/inspection/new",
         icon: <Activity size={20} color={Colors.light.primary} />,
       },
       {
-        id: "plan-task",
-        label: homeStrings.quickActions.actions.planTask.label,
+        id: "add-task",
+        label: "Add Task",
         caption: homeStrings.quickActions.actions.planTask.caption,
         route: "/(tabs)/tasks",
-        icon: <CalendarCheck size={20} color={Colors.light.primary} />,
-      },
-      {
-        id: "review-hives",
-        label: homeStrings.quickActions.actions.reviewHives.label,
-        caption: homeStrings.quickActions.actions.reviewHives.caption,
-        route: "/(tabs)/hives",
-        icon: <Hexagon size={20} color={Colors.light.primary} />,
+        icon: <Plus size={20} color={Colors.light.primary} />,
       },
     ], [homeStrings.quickActions.actions]
   );
@@ -444,7 +472,17 @@ export default function HomeScreen() {
             <InteractiveCard
               key={action.id}
               testID={`quick-action-${action.id}`}
-              onPress={() => router.push(action.route)}
+              onPress={() => {
+                if (action.id === "new-inspection") {
+                  handleNewInspection();
+                  return;
+                }
+                if (action.id === "add-hive") {
+                  handleAddHive();
+                  return;
+                }
+                router.push(action.route);
+              }}
             >
               <View style={styles.quickActionIcon}>{action.icon}</View>
               <View style={styles.quickActionTextBlock}>

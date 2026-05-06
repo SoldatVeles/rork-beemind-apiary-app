@@ -748,7 +748,7 @@ export default function HiveDetailScreen() {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabs}>
-        {(["overview", "inspections", "queen", "tasks", "treatments"] as const).map((tab) => (
+        {(["overview", "inspections", "queen", "tasks"] as const).map((tab) => (
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
@@ -767,7 +767,6 @@ export default function HiveDetailScreen() {
         {activeTab === "inspections" && renderInspections()}
         {activeTab === "queen" && renderQueen()}
         {activeTab === "tasks" && renderTasks()}
-        {activeTab === "treatments" && renderTreatments()}
       </ScrollView>
 
       <Modal

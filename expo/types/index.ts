@@ -1,6 +1,8 @@
 export type HiveStatus = "Active" | "Split" | "Deadout";
 export type QueenStatus = "Active" | "Superseded" | "Lost" | "Dead";
-export type BroodPattern = "solid" | "spotty" | "none";
+export type BroodPattern = "solid" | "spotty" | "none" | "poor" | "good" | "excellent";
+export type PopulationStrength = "weak" | "medium" | "strong";
+export type HoneyStores = "low" | "medium" | "high";
 export type TaskScope = "org" | "yard" | "hive";
 export type TaskPriority = 1 | 2 | 3;
 export type DeviceType = "scale" | "temp" | "humidity" | "co2" | "mic";
@@ -49,6 +51,9 @@ export interface Inspection {
   brood_pattern?: BroodPattern;
   eggs_seen?: boolean;
   larvae_seen?: boolean;
+  queen_seen?: boolean;
+  population_strength?: PopulationStrength;
+  honey_stores?: HoneyStores;
   stores_kg?: number;
   mites_per_100?: number;
   temper?: number;
