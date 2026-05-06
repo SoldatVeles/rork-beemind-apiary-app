@@ -129,7 +129,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         const { data, error: signInError } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: 'myapp://',
+            redirectTo: 'beemind://',
           },
         });
 
@@ -140,7 +140,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         }
 
         if (data.url) {
-          const result = await WebBrowser.openAuthSessionAsync(data.url, 'myapp://');
+          const result = await WebBrowser.openAuthSessionAsync(data.url, 'beemind://');
           
           if (result.type === 'success' && result.url) {
             console.log('[Auth] Google auth success, processing callback');
@@ -186,7 +186,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       setError(null);
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: Platform.OS === 'web' ? window.location.origin : 'myapp://',
+        redirectTo: Platform.OS === 'web' ? window.location.origin : 'beemind://',
       });
 
       if (resetError) {

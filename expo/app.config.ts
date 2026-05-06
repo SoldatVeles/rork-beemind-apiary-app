@@ -2,29 +2,29 @@ import type { ExpoConfig, ConfigContext } from "expo/config";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: "BeeMind Apiary App",
-  slug: "beemind-apiary-app",
+  name: "BeeMind",
+  slug: "beemind",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
-  scheme: "myapp",
+  scheme: "beemind",
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   splash: {
     image: "./assets/images/splash-icon.png",
     resizeMode: "contain",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#FFF8E7",
   },
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "app.rork.beemind-apiary-app",
+    bundleIdentifier: "com.beemind.app",
   },
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
-      backgroundColor: "#ffffff",
+      backgroundColor: "#F5B800",
     },
-    package: "app.rork.beemind-apiary-app",
+    package: "com.beemind.app",
   },
   web: {
     favicon: "./assets/images/favicon.png",
