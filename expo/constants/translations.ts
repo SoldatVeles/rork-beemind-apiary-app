@@ -16,6 +16,13 @@ export const LANGUAGE_FLAGS: Record<Language, string> = {
   de: "🇩🇪",
 };
 
+export const LANGUAGE_FLAG_CODES: Record<Language, string> = {
+  en: "gb",
+  pt: "pt",
+  es: "es",
+  de: "de",
+};
+
 const rawTranslations = {
   en: {
     common: {

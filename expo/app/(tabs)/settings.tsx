@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Alert } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Alert } from "react-native";
 import { useEffect } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Database, Download, Trash2, Info, ChevronRight, Activity, FileText, Sprout, TrendingUp, Award, LogOut } from "lucide-react-native";
@@ -6,7 +6,7 @@ import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import { useBeeMind } from "@/store/beemind-context";
 import { useLanguage } from "@/store/language-store";
-import { LANGUAGE_FLAGS, LANGUAGE_NATIVE_LABELS, SUPPORTED_LANGUAGES, type Language } from "@/constants/translations";
+import { LANGUAGE_FLAGS, LANGUAGE_FLAG_CODES, LANGUAGE_NATIVE_LABELS, SUPPORTED_LANGUAGES, type Language } from "@/constants/translations";
 import { useUserPreferences, type ExperienceLevel } from "@/store/user-preferences-store";
 import { useAuth } from "@/store/auth-store";
 
@@ -254,7 +254,12 @@ export default function SettingsScreen() {
                   language === lang && styles.flagBadgeActive,
                 ]}
               >
-                <Text style={styles.flagEmoji}>{LANGUAGE_FLAGS[lang]}</Text>
+                <Image
+                  source={{ uri: `https://flagcdn.com/w80/${LANGUAGE_FLAG_CODES[lang]}.png` }}
+                  style={styles.flagImage}
+                  resizeMode="cover"
+                  accessibilityLabel={`${getLanguageName(lang)} flag`}
+                />
               </View>
               <Text
                 style={[
@@ -573,6 +578,12 @@ const styles = StyleSheet.create({
   },
   flagEmoji: {
     fontSize: 22,
+  },
+  flagImage: {
+    width: 36,
+    height: 26,
+    borderRadius: 4,
+    backgroundColor: Colors.light.border,
   },
   levelContainer: {
     gap: 12,
