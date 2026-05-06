@@ -9,13 +9,14 @@ import {
 } from "react-native";
 import * as Updates from "expo-updates";
 import { AlertTriangle, RefreshCw, CheckCircle2, XCircle } from "lucide-react-native";
-import { getEnvDebugInfo, logEnvDebugDump } from "@/lib/env";
+import { getEnvDebugInfo, logEnvDebugDump, type ValidationIssue } from "@/lib/env";
 
 type Props = {
   missing: string[];
+  issues?: ValidationIssue[];
 };
 
-export default function SetupScreen({ missing }: Props) {
+export default function SetupScreen({ missing, issues }: Props) {
   const debug = React.useMemo(() => getEnvDebugInfo(), []);
   React.useEffect(() => {
     logEnvDebugDump("SetupScreen mounted");
@@ -47,11 +48,21 @@ export default function SetupScreen({ missing }: Props) {
       </Text>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Missing environment variable(s)</Text>
-        {missing.map((m) => (
-          <Text key={m} style={styles.code}>
-            {m}
-          </Text>
+        <Text style={styles.cardTitle}>Configuration issues</Text>
+        {(issues && issues.length > 0
+          ? issues
+          : missing.map((m) => ({
+              variable: m as ValidationIssue["variable"],
+              reason: "missing" as const,
+              message: `${m} is not set.`,
+            }))
+        ).map((i) => (
+          <View key={`${i.variable}-${i.reason}`} style={{ marginBottom: 8 }}>
+            <Text style={styles.code}>{i.variable}</Text>
+            <Text style={styles.muted}>
+              {i.reason.replace("_", " ")}: {i.message}
+            </Text>
+          </View>
         ))}
       </View>
 
@@ -68,6 +79,12 @@ export default function SetupScreen({ missing }: Props) {
         <Text style={styles.muted}>
           Resolved url from: {debug.resolvedFrom.url ?? "none"}
           {"  \u2022  "}anon key from: {debug.resolvedFrom.anonKey ?? "none"}
+        </Text>
+        <Text style={styles.muted}>
+          URL preview: {debug.resolvedUrlPreview ?? "(none)"} ({debug.trimmedUrlLength} chars)
+        </Text>
+        <Text style={styles.muted}>
+          Anon key preview: {debug.resolvedAnonKeyPreview ?? "(none)"}
         </Text>
         <Text style={[styles.muted, { marginTop: 8 }]}>
           All EXPO_PUBLIC_* keys visible to the app:

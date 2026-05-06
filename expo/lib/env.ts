@@ -23,6 +23,91 @@ function loadLocalEnv(): LocalEnv {
 
 const localEnv = loadLocalEnv();
 
+const PLACEHOLDER_FRAGMENTS = [
+  "YOUR_PROJECT_ID",
+  "YOUR_SUPABASE_ANON_KEY",
+  "YOUR_PUBLIC_ANON_KEY",
+  "your-project",
+  "your_project",
+  "placeholder",
+];
+
+function isPlaceholder(value: string): boolean {
+  const v = value.toLowerCase();
+  return PLACEHOLDER_FRAGMENTS.some((p) => v.includes(p.toLowerCase()));
+}
+
+function normalize(value: string | undefined | null): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim().replace(/^['"]|['"]$/g, "");
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+export type ValidationIssue = {
+  variable: "EXPO_PUBLIC_SUPABASE_URL" | "EXPO_PUBLIC_SUPABASE_ANON_KEY";
+  reason: "missing" | "placeholder" | "invalid_format";
+  message: string;
+};
+
+function validateUrl(raw: string | undefined): ValidationIssue | null {
+  if (!raw) {
+    return {
+      variable: "EXPO_PUBLIC_SUPABASE_URL",
+      reason: "missing",
+      message: "EXPO_PUBLIC_SUPABASE_URL is not set.",
+    };
+  }
+  if (isPlaceholder(raw)) {
+    return {
+      variable: "EXPO_PUBLIC_SUPABASE_URL",
+      reason: "placeholder",
+      message:
+        "EXPO_PUBLIC_SUPABASE_URL still contains a placeholder value (e.g. YOUR_PROJECT_ID).",
+    };
+  }
+  if (!raw.startsWith("https://")) {
+    return {
+      variable: "EXPO_PUBLIC_SUPABASE_URL",
+      reason: "invalid_format",
+      message: "EXPO_PUBLIC_SUPABASE_URL must start with https://",
+    };
+  }
+  if (!raw.includes(".supabase.co") && !raw.includes(".supabase.in")) {
+    return {
+      variable: "EXPO_PUBLIC_SUPABASE_URL",
+      reason: "invalid_format",
+      message: "EXPO_PUBLIC_SUPABASE_URL must include .supabase.co",
+    };
+  }
+  return null;
+}
+
+function validateAnonKey(raw: string | undefined): ValidationIssue | null {
+  if (!raw) {
+    return {
+      variable: "EXPO_PUBLIC_SUPABASE_ANON_KEY",
+      reason: "missing",
+      message: "EXPO_PUBLIC_SUPABASE_ANON_KEY is not set.",
+    };
+  }
+  if (isPlaceholder(raw)) {
+    return {
+      variable: "EXPO_PUBLIC_SUPABASE_ANON_KEY",
+      reason: "placeholder",
+      message:
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY still contains a placeholder value.",
+    };
+  }
+  if (raw.length < 20) {
+    return {
+      variable: "EXPO_PUBLIC_SUPABASE_ANON_KEY",
+      reason: "invalid_format",
+      message: "EXPO_PUBLIC_SUPABASE_ANON_KEY looks too short to be valid.",
+    };
+  }
+  return null;
+}
+
 export type EnvDebugInfo = {
   processEnvUrlDefined: boolean;
   processEnvAnonKeyDefined: boolean;
@@ -32,56 +117,77 @@ export type EnvDebugInfo = {
   localAnonKeyDefined: boolean;
   publicEnvKeys: string[];
   resolvedFrom: { url: string | null; anonKey: string | null };
+  resolvedUrlPreview: string | null;
+  resolvedAnonKeyPreview: string | null;
+  trimmedUrlLength: number;
+  trimmedAnonKeyLength: number;
 };
 
 let debugLogged = false;
 
-/**
- * Collect a snapshot of all sources we look at for Supabase env vars,
- * without ever leaking the actual key values.
- */
+function maskUrl(value: string | undefined): string | null {
+  if (!value) return null;
+  return value.length > 40 ? `${value.slice(0, 30)}...` : value;
+}
+
+function maskKey(value: string | undefined): string | null {
+  if (!value) return null;
+  if (value.length <= 12) return `${value.length} chars`;
+  return `${value.slice(0, 6)}...${value.slice(-4)} (${value.length} chars)`;
+}
+
 export function getEnvDebugInfo(): EnvDebugInfo {
   const extra = readExtra();
   const publicEnvKeys = Object.keys(process.env ?? {})
     .filter((k) => k.startsWith("EXPO_PUBLIC_"))
     .sort();
 
+  const url = pick(
+    process.env.EXPO_PUBLIC_SUPABASE_URL,
+    extra.supabaseUrl,
+    localEnv.EXPO_PUBLIC_SUPABASE_URL,
+  );
+  const anonKey = pick(
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    extra.supabaseAnonKey,
+    localEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+  );
+
   const resolvedFrom: { url: string | null; anonKey: string | null } = {
-    url: process.env.EXPO_PUBLIC_SUPABASE_URL
+    url: normalize(process.env.EXPO_PUBLIC_SUPABASE_URL)
       ? "process.env"
-      : extra.supabaseUrl
+      : normalize(extra.supabaseUrl)
         ? "expoConfig.extra"
-        : localEnv.EXPO_PUBLIC_SUPABASE_URL
+        : normalize(localEnv.EXPO_PUBLIC_SUPABASE_URL)
           ? "env.local"
           : null,
-    anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+    anonKey: normalize(process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY)
       ? "process.env"
-      : extra.supabaseAnonKey
+      : normalize(extra.supabaseAnonKey)
         ? "expoConfig.extra"
-        : localEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY
+        : normalize(localEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY)
           ? "env.local"
           : null,
   };
 
   return {
-    processEnvUrlDefined: typeof process.env.EXPO_PUBLIC_SUPABASE_URL === "string" && process.env.EXPO_PUBLIC_SUPABASE_URL.length > 0,
-    processEnvAnonKeyDefined: typeof process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY === "string" && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY.length > 0,
-    extraUrlDefined: typeof extra.supabaseUrl === "string" && extra.supabaseUrl.length > 0,
-    extraAnonKeyDefined: typeof extra.supabaseAnonKey === "string" && extra.supabaseAnonKey.length > 0,
-    localUrlDefined: typeof localEnv.EXPO_PUBLIC_SUPABASE_URL === "string" && (localEnv.EXPO_PUBLIC_SUPABASE_URL?.length ?? 0) > 0,
-    localAnonKeyDefined: typeof localEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY === "string" && (localEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY?.length ?? 0) > 0,
+    processEnvUrlDefined: !!normalize(process.env.EXPO_PUBLIC_SUPABASE_URL),
+    processEnvAnonKeyDefined: !!normalize(process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY),
+    extraUrlDefined: !!normalize(extra.supabaseUrl),
+    extraAnonKeyDefined: !!normalize(extra.supabaseAnonKey),
+    localUrlDefined: !!normalize(localEnv.EXPO_PUBLIC_SUPABASE_URL),
+    localAnonKeyDefined: !!normalize(localEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY),
     publicEnvKeys,
     resolvedFrom,
+    resolvedUrlPreview: maskUrl(url),
+    resolvedAnonKeyPreview: maskKey(anonKey),
+    trimmedUrlLength: url?.length ?? 0,
+    trimmedAnonKeyLength: anonKey?.length ?? 0,
   };
 }
 
-/**
- * Log a one-time debug dump of env-var visibility. Triggered automatically
- * the first time `getSupabaseConfig()` cannot find EXPO_PUBLIC_SUPABASE_URL
- * via process.env, but also callable from a debug screen.
- */
 export function logEnvDebugDump(reason: string): void {
-  if (debugLogged) return;
+  if (debugLogged || !__DEV__) return;
   debugLogged = true;
   const info = getEnvDebugInfo();
   console.log(`[env] debug dump (${reason})`, {
@@ -92,6 +198,10 @@ export function logEnvDebugDump(reason: string): void {
     localUrlDefined: info.localUrlDefined,
     localAnonKeyDefined: info.localAnonKeyDefined,
     resolvedFrom: info.resolvedFrom,
+    resolvedUrlPreview: info.resolvedUrlPreview,
+    resolvedAnonKeyPreview: info.resolvedAnonKeyPreview,
+    trimmedUrlLength: info.trimmedUrlLength,
+    trimmedAnonKeyLength: info.trimmedAnonKeyLength,
     publicEnvKeys: info.publicEnvKeys,
   });
 }
@@ -115,7 +225,8 @@ function readExtra(): { supabaseUrl?: string; supabaseAnonKey?: string } {
 
 function pick(...values: (string | undefined | null)[]): string | undefined {
   for (const v of values) {
-    if (typeof v === "string" && v.trim().length > 0) return v.trim();
+    const n = normalize(v);
+    if (n) return n;
   }
   return undefined;
 }
@@ -127,12 +238,9 @@ export type SupabaseConfig = {
 
 export type ConfigResult =
   | { ok: true; config: SupabaseConfig }
-  | { ok: false; missing: string[] };
+  | { ok: false; missing: string[]; issues: ValidationIssue[] };
 
 export function getSupabaseConfig(): ConfigResult {
-  if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
-    logEnvDebugDump("process.env.EXPO_PUBLIC_SUPABASE_URL is undefined");
-  }
   const extra = readExtra();
   const url = pick(
     process.env.EXPO_PUBLIC_SUPABASE_URL,
@@ -145,18 +253,36 @@ export function getSupabaseConfig(): ConfigResult {
     localEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY,
   );
 
-  const missing: string[] = [];
-  if (!url || url.includes("YOUR_PROJECT_ID")) {
-    missing.push("EXPO_PUBLIC_SUPABASE_URL");
-  }
-  if (!anonKey || anonKey.includes("YOUR_SUPABASE_ANON_KEY")) {
-    missing.push("EXPO_PUBLIC_SUPABASE_ANON_KEY");
+  const issues: ValidationIssue[] = [];
+  const urlIssue = validateUrl(url);
+  if (urlIssue) issues.push(urlIssue);
+  const anonIssue = validateAnonKey(anonKey);
+  if (anonIssue) issues.push(anonIssue);
+
+  if (issues.length > 0) {
+    if (__DEV__) {
+      logEnvDebugDump("validation failed");
+      console.log("[env] validation issues", issues);
+    }
+    return {
+      ok: false,
+      missing: issues.map((i) => i.variable),
+      issues,
+    };
   }
 
-  if (missing.length > 0) {
-    return { ok: false, missing };
+  if (__DEV__ && !debugLogged) {
+    debugLogged = true;
+    console.log("[env] Supabase config OK", {
+      urlPreview: maskUrl(url),
+      anonKeyPreview: maskKey(anonKey),
+    });
   }
-  return { ok: true, config: { url: url as string, anonKey: anonKey as string } };
+
+  return {
+    ok: true,
+    config: { url: url as string, anonKey: anonKey as string },
+  };
 }
 
 export function isSupabaseConfigured(): boolean {

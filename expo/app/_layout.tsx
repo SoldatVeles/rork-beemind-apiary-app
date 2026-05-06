@@ -104,7 +104,7 @@ export default function RootLayout() {
   if (!cfg.ok) {
     return (
       <GestureHandlerRootView style={styles.flex}>
-        <SetupScreen missing={cfg.missing} />
+        <SetupScreen missing={cfg.missing} issues={cfg.issues} />
       </GestureHandlerRootView>
     );
   }
