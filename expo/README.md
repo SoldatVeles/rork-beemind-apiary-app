@@ -7,6 +7,26 @@ This is a native cross-platform mobile app created with [Rork](https://rork.com)
 **Platform**: Native iOS & Android app, exportable to web
 **Framework**: Expo Router + React Native
 
+## Connect Supabase
+
+The app reads its Supabase credentials from environment variables. Without them the app will throw a clear startup error.
+
+1. Open the [Supabase Dashboard](https://supabase.com/dashboard).
+2. Go to **Project Settings → API**.
+3. Copy the values into a `.env` file at the project root (use `.env.example` as a template):
+
+   ```bash
+   EXPO_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+   ```
+
+   - `EXPO_PUBLIC_SUPABASE_URL` ← **Project URL**
+   - `EXPO_PUBLIC_SUPABASE_ANON_KEY` ← **anon public** key
+
+4. **Fully restart Expo / Rork preview.** Expo only reads `.env` at startup, so a hot reload is not enough.
+
+The `EXPO_PUBLIC_` prefix makes these values available in client-side code. Never put the `service_role` key in this file.
+
 ## How can I edit this code?
 
 There are several ways of editing your native mobile application.
