@@ -836,7 +836,7 @@ export default function HiveDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabs}>
+      <View style={styles.tabs}>
         {(["overview", "inspections", "queen", "tasks", "harvests"] as const).map((tab) => (
           <TouchableOpacity
             key={tab}
@@ -844,12 +844,17 @@ export default function HiveDetailScreen() {
             onPress={() => setActiveTab(tab)}
             testID={`hive-tab-${tab}`}
           >
-            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+            <Text
+              style={[styles.tabText, activeTab === tab && styles.tabTextActive]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+            >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
 
       <ScrollView style={styles.tabContent} contentContainerStyle={styles.tabContentInner}>
         {activeTab === "overview" && renderOverview()}
@@ -1341,24 +1346,28 @@ const styles = StyleSheet.create({
     color: Colors.light.error,
   },
   tabs: {
+    flexDirection: "row" as const,
     backgroundColor: Colors.light.card,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.border,
-    maxHeight: 50,
+    height: 50,
   },
   tab: {
-    paddingHorizontal: 20,
+    flex: 1,
+    paddingHorizontal: 4,
     paddingVertical: 12,
     alignItems: "center",
+    justifyContent: "center",
   },
   tabActive: {
     borderBottomWidth: 2,
     borderBottomColor: Colors.light.primary,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "500" as const,
     color: Colors.light.tabIconDefault,
+    textAlign: "center" as const,
   },
   tabTextActive: {
     color: Colors.light.primary,
