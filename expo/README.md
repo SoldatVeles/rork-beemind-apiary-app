@@ -9,23 +9,36 @@ This is a native cross-platform mobile app created with [Rork](https://rork.com)
 
 ## Connect Supabase
 
-The app reads its Supabase credentials from environment variables. Without them the app will throw a clear startup error.
+The app reads Supabase credentials in this order:
 
-1. Open the [Supabase Dashboard](https://supabase.com/dashboard).
-2. Go to **Project Settings → API**.
-3. Copy the values into a `.env` file at the project root (use `.env.example` as a template):
+1. `process.env.EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+2. `Constants.expoConfig.extra.supabaseUrl` / `supabaseAnonKey` (populated from the same env vars in `app.config.ts`)
+3. `lib/env.local.ts` — optional local-dev fallback (gitignored)
+
+If none are set, the app will not crash — it will render a friendly setup screen explaining what is missing.
+
+### Option A — Rork preview (recommended)
+
+1. Open your Rork project → **Settings → Environment Variables**.
+2. Add:
 
    ```bash
    EXPO_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
    EXPO_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
    ```
 
-   - `EXPO_PUBLIC_SUPABASE_URL` ← **Project URL**
-   - `EXPO_PUBLIC_SUPABASE_ANON_KEY` ← **anon public** key
+   Get the values from the [Supabase Dashboard](https://supabase.com/dashboard) → **Project Settings → API** (Project URL + anon public key).
+3. **Fully restart the preview.** A hot reload is not enough — Expo only reads env vars at startup, and `app.config.ts` is evaluated once.
 
-4. **Fully restart Expo / Rork preview.** Expo only reads `.env` at startup, so a hot reload is not enough.
+### Option B — Local `.env`
 
-The `EXPO_PUBLIC_` prefix makes these values available in client-side code. Never put the `service_role` key in this file.
+Copy `.env.example` to `.env` at the `expo/` root and fill in the values. Then restart Expo.
+
+### Option C — Local dev fallback (no env vars)
+
+If you can’t set env vars (e.g. quick local hacking), copy `lib/env.example.ts` to `lib/env.local.ts` and fill in your values. The file is gitignored and only loaded in `__DEV__`.
+
+Never put the `service_role` key in any of these files. Only the `anon public` key is safe for clients.
 
 ## How can I edit this code?
 

@@ -8,6 +8,8 @@ import { LanguageProvider, useLanguage } from "@/store/language-store";
 import { AuthProvider } from "@/store/auth-store";
 import { BeeMindProvider } from "@/store/beemind-context";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { getSupabaseConfig } from "@/lib/env";
+import SetupScreen from "@/components/SetupScreen";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -91,6 +93,22 @@ function AppContent() {
 }
 
 export default function RootLayout() {
+  const cfg = getSupabaseConfig();
+
+  useEffect(() => {
+    if (!cfg.ok) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [cfg.ok]);
+
+  if (!cfg.ok) {
+    return (
+      <GestureHandlerRootView style={styles.flex}>
+        <SetupScreen missing={cfg.missing} />
+      </GestureHandlerRootView>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

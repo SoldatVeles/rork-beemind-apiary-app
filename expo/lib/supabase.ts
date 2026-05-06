@@ -1,27 +1,34 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
+import { getSupabaseConfig } from "./env";
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const result = getSupabaseConfig();
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  const missing: string[] = [];
-  if (!supabaseUrl) missing.push("EXPO_PUBLIC_SUPABASE_URL");
-  if (!supabaseAnonKey) missing.push("EXPO_PUBLIC_SUPABASE_ANON_KEY");
-  throw new Error(
-    `Missing Supabase environment variable(s): ${missing.join(", ")}.\n\n` +
-      `1. Copy .env.example to .env\n` +
-      `2. Fill in the values from Supabase Dashboard → Project Settings → API\n` +
-      `3. FULLY restart Expo / Rork preview (env vars are only read on startup).\n`
+if (!result.ok) {
+  console.warn(
+    `[supabase] Missing config: ${result.missing.join(", ")}. ` +
+      `App will render the setup screen until Supabase env vars are provided.`,
   );
 }
 
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: AsyncStorage,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: Platform.OS === "web",
+/**
+ * Supabase client. If config is missing we create a placeholder client with
+ * dummy URL/key so that simply importing this module never throws. Any actual
+ * call (auth, query) will fail – but the app will already have shown the
+ * setup screen instead of getting that far.
+ */
+export const supabase: SupabaseClient = createClient(
+  result.ok ? result.config.url : "https://placeholder.supabase.co",
+  result.ok ? result.config.anonKey : "placeholder-anon-key",
+  {
+    auth: {
+      storage: AsyncStorage,
+      autoRefreshToken: result.ok,
+      persistSession: result.ok,
+      detectSessionInUrl: Platform.OS === "web",
+    },
   },
-});
+);
+
+export { getSupabaseConfig, isSupabaseConfigured } from "./env";

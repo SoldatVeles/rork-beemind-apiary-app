@@ -39,6 +39,10 @@ yarn-error.*
 ios/
 android/
 .env
+.env.local
 core
 node_modules
 .expo
+
+# Local dev env fallback (never commit real keys)
+lib/env.local.ts
