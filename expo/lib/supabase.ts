@@ -1,7 +1,21 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { getSupabaseConfig } from "./env";
+
+if (__DEV__) {
+  const extra = (Constants.expoConfig?.extra ?? {}) as {
+    supabaseUrl?: string;
+    supabaseAnonKey?: string;
+  };
+  console.log("SUPABASE ENV DEBUG", {
+    processUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    processAnonPreview: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 12),
+    extraUrl: extra.supabaseUrl,
+    extraAnonPreview: extra.supabaseAnonKey?.slice(0, 12),
+  });
+}
 
 const result = getSupabaseConfig();
 

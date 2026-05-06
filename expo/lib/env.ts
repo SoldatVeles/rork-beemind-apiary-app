@@ -1,35 +1,12 @@
 import Constants from "expo-constants";
 
-type LocalEnv = {
-  EXPO_PUBLIC_SUPABASE_URL?: string;
-  EXPO_PUBLIC_SUPABASE_ANON_KEY?: string;
-};
-
-/**
- * Try to load `lib/env.local.ts` for local development only.
- * The file is gitignored and optional. We swallow the import error
- * so production / preview builds without it work just fine.
- */
-function loadLocalEnv(): LocalEnv {
-  if (!__DEV__) return {};
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require("./env.local") as { localEnv?: LocalEnv };
-    return mod?.localEnv ?? {};
-  } catch {
-    return {};
-  }
-}
-
-const localEnv = loadLocalEnv();
-
 const PLACEHOLDER_FRAGMENTS = [
-  "YOUR_PROJECT_ID",
-  "YOUR_SUPABASE_ANON_KEY",
-  "YOUR_PUBLIC_ANON_KEY",
-  "your-project",
   "your_project",
+  "your-project",
+  "your_supabase",
+  "your-supabase",
   "placeholder",
+  "example.supabase",
 ];
 
 function isPlaceholder(value: string): boolean {
@@ -61,8 +38,7 @@ function validateUrl(raw: string | undefined): ValidationIssue | null {
     return {
       variable: "EXPO_PUBLIC_SUPABASE_URL",
       reason: "placeholder",
-      message:
-        "EXPO_PUBLIC_SUPABASE_URL still contains a placeholder value (e.g. YOUR_PROJECT_ID).",
+      message: "EXPO_PUBLIC_SUPABASE_URL still contains a placeholder value.",
     };
   }
   if (!raw.startsWith("https://")) {
@@ -136,76 +112,6 @@ function maskKey(value: string | undefined): string | null {
   return `${value.slice(0, 6)}...${value.slice(-4)} (${value.length} chars)`;
 }
 
-export function getEnvDebugInfo(): EnvDebugInfo {
-  const extra = readExtra();
-  const publicEnvKeys = Object.keys(process.env ?? {})
-    .filter((k) => k.startsWith("EXPO_PUBLIC_"))
-    .sort();
-
-  const url = pick(
-    process.env.EXPO_PUBLIC_SUPABASE_URL,
-    extra.supabaseUrl,
-    localEnv.EXPO_PUBLIC_SUPABASE_URL,
-  );
-  const anonKey = pick(
-    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-    extra.supabaseAnonKey,
-    localEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-  );
-
-  const resolvedFrom: { url: string | null; anonKey: string | null } = {
-    url: normalize(process.env.EXPO_PUBLIC_SUPABASE_URL)
-      ? "process.env"
-      : normalize(extra.supabaseUrl)
-        ? "expoConfig.extra"
-        : normalize(localEnv.EXPO_PUBLIC_SUPABASE_URL)
-          ? "env.local"
-          : null,
-    anonKey: normalize(process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY)
-      ? "process.env"
-      : normalize(extra.supabaseAnonKey)
-        ? "expoConfig.extra"
-        : normalize(localEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY)
-          ? "env.local"
-          : null,
-  };
-
-  return {
-    processEnvUrlDefined: !!normalize(process.env.EXPO_PUBLIC_SUPABASE_URL),
-    processEnvAnonKeyDefined: !!normalize(process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY),
-    extraUrlDefined: !!normalize(extra.supabaseUrl),
-    extraAnonKeyDefined: !!normalize(extra.supabaseAnonKey),
-    localUrlDefined: !!normalize(localEnv.EXPO_PUBLIC_SUPABASE_URL),
-    localAnonKeyDefined: !!normalize(localEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY),
-    publicEnvKeys,
-    resolvedFrom,
-    resolvedUrlPreview: maskUrl(url),
-    resolvedAnonKeyPreview: maskKey(anonKey),
-    trimmedUrlLength: url?.length ?? 0,
-    trimmedAnonKeyLength: anonKey?.length ?? 0,
-  };
-}
-
-export function logEnvDebugDump(reason: string): void {
-  if (debugLogged || !__DEV__) return;
-  debugLogged = true;
-  const info = getEnvDebugInfo();
-  console.log(`[env] debug dump (${reason})`, {
-    processEnvUrlDefined: info.processEnvUrlDefined,
-    processEnvAnonKeyDefined: info.processEnvAnonKeyDefined,
-    extraUrlDefined: info.extraUrlDefined,
-    extraAnonKeyDefined: info.extraAnonKeyDefined,
-    localUrlDefined: info.localUrlDefined,
-    localAnonKeyDefined: info.localAnonKeyDefined,
-    resolvedFrom: info.resolvedFrom,
-    resolvedUrlPreview: info.resolvedUrlPreview,
-    resolvedAnonKeyPreview: info.resolvedAnonKeyPreview,
-    trimmedUrlLength: info.trimmedUrlLength,
-    trimmedAnonKeyLength: info.trimmedAnonKeyLength,
-    publicEnvKeys: info.publicEnvKeys,
-  });
-}
-
 function readExtra(): { supabaseUrl?: string; supabaseAnonKey?: string } {
   const extra =
     (Constants.expoConfig?.extra as Record<string, unknown> | undefined) ??
@@ -231,6 +137,67 @@ function pick(...values: (string | undefined | null)[]): string | undefined {
   return undefined;
 }
 
+export function getEnvDebugInfo(): EnvDebugInfo {
+  const extra = readExtra();
+  const publicEnvKeys = Object.keys(process.env ?? {})
+    .filter((k) => k.startsWith("EXPO_PUBLIC_"))
+    .sort();
+
+  const url = pick(process.env.EXPO_PUBLIC_SUPABASE_URL, extra.supabaseUrl);
+  const anonKey = pick(
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    extra.supabaseAnonKey,
+  );
+
+  const resolvedFrom: { url: string | null; anonKey: string | null } = {
+    url: normalize(process.env.EXPO_PUBLIC_SUPABASE_URL)
+      ? "process.env"
+      : normalize(extra.supabaseUrl)
+        ? "expoConfig.extra"
+        : null,
+    anonKey: normalize(process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY)
+      ? "process.env"
+      : normalize(extra.supabaseAnonKey)
+        ? "expoConfig.extra"
+        : null,
+  };
+
+  return {
+    processEnvUrlDefined: !!normalize(process.env.EXPO_PUBLIC_SUPABASE_URL),
+    processEnvAnonKeyDefined: !!normalize(
+      process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    ),
+    extraUrlDefined: !!normalize(extra.supabaseUrl),
+    extraAnonKeyDefined: !!normalize(extra.supabaseAnonKey),
+    localUrlDefined: false,
+    localAnonKeyDefined: false,
+    publicEnvKeys,
+    resolvedFrom,
+    resolvedUrlPreview: maskUrl(url),
+    resolvedAnonKeyPreview: maskKey(anonKey),
+    trimmedUrlLength: url?.length ?? 0,
+    trimmedAnonKeyLength: anonKey?.length ?? 0,
+  };
+}
+
+export function logEnvDebugDump(reason: string): void {
+  if (debugLogged || !__DEV__) return;
+  debugLogged = true;
+  const info = getEnvDebugInfo();
+  console.log(`[env] debug dump (${reason})`, {
+    processEnvUrlDefined: info.processEnvUrlDefined,
+    processEnvAnonKeyDefined: info.processEnvAnonKeyDefined,
+    extraUrlDefined: info.extraUrlDefined,
+    extraAnonKeyDefined: info.extraAnonKeyDefined,
+    resolvedFrom: info.resolvedFrom,
+    resolvedUrlPreview: info.resolvedUrlPreview,
+    resolvedAnonKeyPreview: info.resolvedAnonKeyPreview,
+    trimmedUrlLength: info.trimmedUrlLength,
+    trimmedAnonKeyLength: info.trimmedAnonKeyLength,
+    publicEnvKeys: info.publicEnvKeys,
+  });
+}
+
 export type SupabaseConfig = {
   url: string;
   anonKey: string;
@@ -242,15 +209,10 @@ export type ConfigResult =
 
 export function getSupabaseConfig(): ConfigResult {
   const extra = readExtra();
-  const url = pick(
-    process.env.EXPO_PUBLIC_SUPABASE_URL,
-    extra.supabaseUrl,
-    localEnv.EXPO_PUBLIC_SUPABASE_URL,
-  );
+  const url = pick(process.env.EXPO_PUBLIC_SUPABASE_URL, extra.supabaseUrl);
   const anonKey = pick(
     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     extra.supabaseAnonKey,
-    localEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY,
   );
 
   const issues: ValidationIssue[] = [];

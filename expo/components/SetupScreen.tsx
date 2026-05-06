@@ -111,15 +111,6 @@ export default function SetupScreen({ missing, issues }: Props) {
         </Text>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Local development fallback</Text>
-        <Text style={styles.step}>
-          Copy <Text style={styles.codeInline}>lib/env.example.ts</Text> to{" "}
-          <Text style={styles.codeInline}>lib/env.local.ts</Text> and fill in
-          your values. That file is gitignored.
-        </Text>
-      </View>
-
       <Pressable
         onPress={onReload}
         style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
