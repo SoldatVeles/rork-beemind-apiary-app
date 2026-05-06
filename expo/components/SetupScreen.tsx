@@ -8,13 +8,18 @@ import {
   Pressable,
 } from "react-native";
 import * as Updates from "expo-updates";
-import { AlertTriangle, RefreshCw } from "lucide-react-native";
+import { AlertTriangle, RefreshCw, CheckCircle2, XCircle } from "lucide-react-native";
+import { getEnvDebugInfo, logEnvDebugDump } from "@/lib/env";
 
 type Props = {
   missing: string[];
 };
 
 export default function SetupScreen({ missing }: Props) {
+  const debug = React.useMemo(() => getEnvDebugInfo(), []);
+  React.useEffect(() => {
+    logEnvDebugDump("SetupScreen mounted");
+  }, []);
   const onReload = async () => {
     try {
       if (Platform.OS === "web") {
@@ -48,6 +53,28 @@ export default function SetupScreen({ missing }: Props) {
             {m}
           </Text>
         ))}
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Environment variable status</Text>
+        <EnvRow
+          name="EXPO_PUBLIC_SUPABASE_URL"
+          defined={debug.processEnvUrlDefined}
+        />
+        <EnvRow
+          name="EXPO_PUBLIC_SUPABASE_ANON_KEY"
+          defined={debug.processEnvAnonKeyDefined}
+        />
+        <Text style={styles.muted}>
+          Resolved url from: {debug.resolvedFrom.url ?? "none"}
+          {"  \u2022  "}anon key from: {debug.resolvedFrom.anonKey ?? "none"}
+        </Text>
+        <Text style={[styles.muted, { marginTop: 8 }]}>
+          All EXPO_PUBLIC_* keys visible to the app:
+        </Text>
+        <Text style={styles.code}>
+          {debug.publicEnvKeys.length > 0 ? debug.publicEnvKeys.join("\n") : "(none)"}
+        </Text>
       </View>
 
       <View style={styles.card}>
@@ -87,6 +114,39 @@ export default function SetupScreen({ missing }: Props) {
     </ScrollView>
   );
 }
+
+function EnvRow({ name, defined }: { name: string; defined: boolean }) {
+  const Icon = defined ? CheckCircle2 : XCircle;
+  const color = defined ? "#16A34A" : "#DC2626";
+  return (
+    <View style={envRowStyles.row} testID={`env-row-${name}`}>
+      <Icon size={16} color={color} />
+      <Text style={envRowStyles.name}>{name}</Text>
+      <Text style={[envRowStyles.status, { color }]}>
+        {defined ? "defined" : "undefined"}
+      </Text>
+    </View>
+  );
+}
+
+const envRowStyles = StyleSheet.create({
+  row: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    paddingVertical: 4,
+  },
+  name: {
+    flex: 1,
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+    fontSize: 12,
+    color: "#111827",
+  },
+  status: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -148,6 +208,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginTop: 4,
     alignSelf: "flex-start" as const,
+  },
+  muted: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 6,
   },
   codeInline: {
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",

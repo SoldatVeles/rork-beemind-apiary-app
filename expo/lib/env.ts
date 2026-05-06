@@ -23,6 +23,79 @@ function loadLocalEnv(): LocalEnv {
 
 const localEnv = loadLocalEnv();
 
+export type EnvDebugInfo = {
+  processEnvUrlDefined: boolean;
+  processEnvAnonKeyDefined: boolean;
+  extraUrlDefined: boolean;
+  extraAnonKeyDefined: boolean;
+  localUrlDefined: boolean;
+  localAnonKeyDefined: boolean;
+  publicEnvKeys: string[];
+  resolvedFrom: { url: string | null; anonKey: string | null };
+};
+
+let debugLogged = false;
+
+/**
+ * Collect a snapshot of all sources we look at for Supabase env vars,
+ * without ever leaking the actual key values.
+ */
+export function getEnvDebugInfo(): EnvDebugInfo {
+  const extra = readExtra();
+  const publicEnvKeys = Object.keys(process.env ?? {})
+    .filter((k) => k.startsWith("EXPO_PUBLIC_"))
+    .sort();
+
+  const resolvedFrom: { url: string | null; anonKey: string | null } = {
+    url: process.env.EXPO_PUBLIC_SUPABASE_URL
+      ? "process.env"
+      : extra.supabaseUrl
+        ? "expoConfig.extra"
+        : localEnv.EXPO_PUBLIC_SUPABASE_URL
+          ? "env.local"
+          : null,
+    anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+      ? "process.env"
+      : extra.supabaseAnonKey
+        ? "expoConfig.extra"
+        : localEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY
+          ? "env.local"
+          : null,
+  };
+
+  return {
+    processEnvUrlDefined: typeof process.env.EXPO_PUBLIC_SUPABASE_URL === "string" && process.env.EXPO_PUBLIC_SUPABASE_URL.length > 0,
+    processEnvAnonKeyDefined: typeof process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY === "string" && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY.length > 0,
+    extraUrlDefined: typeof extra.supabaseUrl === "string" && extra.supabaseUrl.length > 0,
+    extraAnonKeyDefined: typeof extra.supabaseAnonKey === "string" && extra.supabaseAnonKey.length > 0,
+    localUrlDefined: typeof localEnv.EXPO_PUBLIC_SUPABASE_URL === "string" && (localEnv.EXPO_PUBLIC_SUPABASE_URL?.length ?? 0) > 0,
+    localAnonKeyDefined: typeof localEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY === "string" && (localEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY?.length ?? 0) > 0,
+    publicEnvKeys,
+    resolvedFrom,
+  };
+}
+
+/**
+ * Log a one-time debug dump of env-var visibility. Triggered automatically
+ * the first time `getSupabaseConfig()` cannot find EXPO_PUBLIC_SUPABASE_URL
+ * via process.env, but also callable from a debug screen.
+ */
+export function logEnvDebugDump(reason: string): void {
+  if (debugLogged) return;
+  debugLogged = true;
+  const info = getEnvDebugInfo();
+  console.log(`[env] debug dump (${reason})`, {
+    processEnvUrlDefined: info.processEnvUrlDefined,
+    processEnvAnonKeyDefined: info.processEnvAnonKeyDefined,
+    extraUrlDefined: info.extraUrlDefined,
+    extraAnonKeyDefined: info.extraAnonKeyDefined,
+    localUrlDefined: info.localUrlDefined,
+    localAnonKeyDefined: info.localAnonKeyDefined,
+    resolvedFrom: info.resolvedFrom,
+    publicEnvKeys: info.publicEnvKeys,
+  });
+}
+
 function readExtra(): { supabaseUrl?: string; supabaseAnonKey?: string } {
   const extra =
     (Constants.expoConfig?.extra as Record<string, unknown> | undefined) ??
@@ -57,6 +130,9 @@ export type ConfigResult =
   | { ok: false; missing: string[] };
 
 export function getSupabaseConfig(): ConfigResult {
+  if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+    logEnvDebugDump("process.env.EXPO_PUBLIC_SUPABASE_URL is undefined");
+  }
   const extra = readExtra();
   const url = pick(
     process.env.EXPO_PUBLIC_SUPABASE_URL,
