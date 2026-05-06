@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Hexagon, Map as MapIcon, Plus, Search, X, Navigation } from "lucide-react-native";
+import { Hexagon, Map as MapIcon, Plus, Search, X, Navigation, Crown } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "../../../constants/colors";
 import type { Hive, HiveStatus } from "../../../types";
@@ -19,6 +19,9 @@ import MapLocationPicker from "@/components/hives/MapLocationPicker";
 import { useBeeMind } from "@/store/beemind-context";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateViews";
 import HiveStatusChips from "@/components/HiveStatusChips";
+import UpgradeModal from "@/components/UpgradeModal";
+import { usePro, FREE_HIVE_LIMIT } from "@/store/pro-store";
+import { useLanguage } from "@/store/language-store";
 
 interface HiveFormState {
   yard_id: string;
@@ -42,6 +45,12 @@ export default function HivesScreen() {
   const insets = useSafeAreaInsets();
   const { hives, yards, addHive, queens, inspections, tasks, queryStates } = useBeeMind();
   const hivesState = queryStates.hives;
+  const { isPro, canCreateHive } = usePro();
+  const { t } = useLanguage();
+  const proCopy = (t as unknown as { pro?: Record<string, string> }).pro ?? {};
+  const [upgradeVisible, setUpgradeVisible] = useState<boolean>(false);
+  const hiveCount = hives.length;
+  const reachedLimit = !isPro && hiveCount >= FREE_HIVE_LIMIT;
   const [search, setSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<HiveStatus | "All">("All");
   const [modalVisible, setModalVisible] = useState<boolean>(false);
@@ -129,8 +138,23 @@ export default function HivesScreen() {
     return parsed;
   };
 
+  const openCreate = () => {
+    if (!canCreateHive(hiveCount)) {
+      console.log("[HivesScreen] hive limit reached, showing upgrade modal");
+      setUpgradeVisible(true);
+      return;
+    }
+    setModalVisible(true);
+  };
+
   const handleSubmit = () => {
     console.log("[HivesScreen] submit new hive", formData);
+
+    if (!canCreateHive(hiveCount)) {
+      setModalVisible(false);
+      setUpgradeVisible(true);
+      return;
+    }
 
     if (!formData.label.trim()) {
       Alert.alert("Hive label required", "Give this hive a short label so you can find it again (e.g. 'Hive 1').");
@@ -263,7 +287,7 @@ export default function HivesScreen() {
               title="No hives yet"
               message={yards.length === 0 ? "Add an apiary first, then add your first hive to start tracking inspections, queens and harvests." : "A hive holds a colony of bees. Add your first hive to start tracking inspections, queens and harvests."}
               actionLabel={yards.length === 0 ? "Add an apiary first" : "Add your first hive"}
-              onAction={() => yards.length === 0 ? router.push("/(tabs)/yards/new") : setModalVisible(true)}
+              onAction={() => yards.length === 0 ? router.push("/(tabs)/yards/new") : openCreate()}
             />
           )
         ) : (
@@ -315,13 +339,37 @@ export default function HivesScreen() {
         )}
       </ScrollView>
 
+      {!isPro && (
+        <View style={styles.planBanner} testID="hive-plan-banner">
+          <View style={styles.planBannerLeft}>
+            <Crown size={16} color={Colors.light.primary} />
+            <Text style={styles.planBannerText}>
+              {hiveCount}/{FREE_HIVE_LIMIT} {proCopy.statusFree ?? "Free Plan"}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={() => setUpgradeVisible(true)} testID="hive-plan-upgrade">
+            <Text style={styles.planBannerCta}>{proCopy.upgradeCta ?? "Upgrade"}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <TouchableOpacity
-        style={styles.fab}
-        onPress={() => setModalVisible(true)}
+        style={[styles.fab, reachedLimit && styles.fabLocked]}
+        onPress={openCreate}
         testID="add-hive-button"
       >
-        <Plus size={24} color="#FFFFFF" />
+        {reachedLimit ? (
+          <Crown size={24} color="#FFFFFF" />
+        ) : (
+          <Plus size={24} color="#FFFFFF" />
+        )}
       </TouchableOpacity>
+
+      <UpgradeModal
+        visible={upgradeVisible}
+        onClose={() => setUpgradeVisible(false)}
+        reason={reachedLimit ? (proCopy.hiveLimitReached ?? `You have reached the free plan limit of ${FREE_HIVE_LIMIT} hives.`) : undefined}
+      />
 
       <Modal
         visible={mapModalVisible}
@@ -704,10 +752,52 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
   },
+  planBanner: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 16,
+    backgroundColor: Colors.light.card,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: Colors.light.primary + "40",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+      },
+      android: { elevation: 2 },
+    }),
+  },
+  planBannerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  planBannerText: {
+    fontSize: 13,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
+  },
+  planBannerCta: {
+    fontSize: 13,
+    fontWeight: "700" as const,
+    color: Colors.light.primary,
+  },
+  fabLocked: {
+    backgroundColor: Colors.light.tabIconDefault,
+  },
   fab: {
     position: "absolute",
     right: 16,
-    bottom: 16,
+    bottom: 76,
     width: 56,
     height: 56,
     borderRadius: 28,

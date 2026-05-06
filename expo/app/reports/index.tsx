@@ -1,15 +1,22 @@
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Alert } from "react-native";
 import { Stack } from "expo-router";
-import { FileText, Download, Calendar, TrendingUp, BarChart3 } from "lucide-react-native";
+import { FileText, Download, Calendar, TrendingUp, BarChart3, Crown } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { useBeeMind } from "@/store/beemind-context";
+import { usePro } from "@/store/pro-store";
+import { useLanguage } from "@/store/language-store";
+import UpgradeModal from "@/components/UpgradeModal";
 
 type ReportType = "summary" | "inspections" | "harvests" | "tasks" | "queens";
 
 export default function ReportsScreen() {
   const { yards, hives, queens, inspections, tasks, harvests, devices, sensorReadings } = useBeeMind();
   const [selectedReport, setSelectedReport] = useState<ReportType | null>(null);
+  const { isPro } = usePro();
+  const { t } = useLanguage();
+  const proCopy = (t as unknown as { pro?: Record<string, string> }).pro ?? {};
+  const [upgradeVisible, setUpgradeVisible] = useState<boolean>(false);
 
   const generateSummaryReport = () => {
     const activeHives = hives.filter((h) => h.status === "Active").length;
@@ -156,6 +163,11 @@ export default function ReportsScreen() {
   };
 
   const handleExport = (type: ReportType) => {
+    if (!isPro) {
+      console.log("[Reports] export blocked, showing upgrade modal");
+      setUpgradeVisible(true);
+      return;
+    }
     const report = getReportData(type);
     const exportData = {
       report: report.title,
@@ -225,9 +237,16 @@ export default function ReportsScreen() {
               <TouchableOpacity
                 style={styles.exportButton}
                 onPress={() => handleExport(selectedReport)}
+                testID="reports-export-button"
               >
-                <Download size={20} color="#FFFFFF" />
-                <Text style={styles.exportButtonText}>Export</Text>
+                {isPro ? (
+                  <Download size={20} color="#FFFFFF" />
+                ) : (
+                  <Crown size={18} color="#FFFFFF" />
+                )}
+                <Text style={styles.exportButtonText}>
+                  {isPro ? "Export" : `Export · ${proCopy.badge ?? "Pro"}`}
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -241,6 +260,11 @@ export default function ReportsScreen() {
             </View>
           </View>
         )}
+        <UpgradeModal
+          visible={upgradeVisible}
+          onClose={() => setUpgradeVisible(false)}
+          reason={proCopy.reportExportLocked ?? "Exporting reports is a Pro feature."}
+        />
       </ScrollView>
     </>
   );

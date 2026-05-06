@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { LanguageProvider, useLanguage } from "@/store/language-store";
 import { AuthProvider } from "@/store/auth-store";
 import { BeeMindProvider } from "@/store/beemind-context";
+import { ProProvider } from "@/store/pro-store";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { getSupabaseConfig } from "@/lib/env";
 import SetupScreen from "@/components/SetupScreen";
@@ -114,7 +115,9 @@ export default function RootLayout() {
       <AuthProvider>
         <LanguageProvider>
           <BeeMindProvider>
-            <AppContent />
+            <ProProvider>
+              <AppContent />
+            </ProProvider>
           </BeeMindProvider>
         </LanguageProvider>
       </AuthProvider>

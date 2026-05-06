@@ -1,7 +1,8 @@
 import { Image, ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Alert } from "react-native";
 import { useEffect } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Database, Download, Trash2, Info, ChevronRight, Activity, FileText, Sprout, TrendingUp, Award, LogOut } from "lucide-react-native";
+import { Database, Download, Trash2, Info, ChevronRight, Activity, FileText, Sprout, TrendingUp, Award, LogOut, Crown } from "lucide-react-native";
+import { Switch } from "react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import { useBeeMind } from "@/store/beemind-context";
@@ -9,6 +10,9 @@ import { useLanguage } from "@/store/language-store";
 import { LANGUAGE_FLAGS, LANGUAGE_FLAG_CODES, LANGUAGE_NATIVE_LABELS, SUPPORTED_LANGUAGES, type Language } from "@/constants/translations";
 import { useUserPreferences, type ExperienceLevel } from "@/store/user-preferences-store";
 import { useAuth } from "@/store/auth-store";
+import { usePro } from "@/store/pro-store";
+import UpgradeModal from "@/components/UpgradeModal";
+import { useState } from "react";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -17,6 +21,9 @@ export default function SettingsScreen() {
   const { language, setLanguage, t } = useLanguage();
   const { experienceLevel, setExperienceLevel } = useUserPreferences();
   const { signOut, user } = useAuth();
+  const { isPro, togglePro } = usePro();
+  const [upgradeVisible, setUpgradeVisible] = useState<boolean>(false);
+  const proCopy = (t as unknown as { pro?: Record<string, string> }).pro ?? {};
   const currentExperienceLevel: ExperienceLevel = experienceLevel ?? "beginner";
 
   useEffect(() => {
@@ -275,6 +282,47 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
+        <View style={styles.proHeaderRow}>
+          <Text style={styles.sectionTitle}>{proCopy.sectionTitle ?? "BeeMind Pro"}</Text>
+          <View style={[styles.proStatusPill, isPro ? styles.proStatusPillPro : styles.proStatusPillFree]}>
+            <Crown size={12} color={isPro ? "#FFFFFF" : Colors.light.primary} />
+            <Text style={[styles.proStatusPillText, { color: isPro ? "#FFFFFF" : Colors.light.primary }]}>
+              {isPro ? (proCopy.statusPro ?? "Pro Plan") : (proCopy.statusFree ?? "Free Plan")}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.sectionDescription}>
+          {isPro ? (proCopy.proDescription ?? "You have full access to all BeeMind features.") : (proCopy.freeDescription ?? "Up to 3 hives, basic tracking. Upgrade to unlock everything.")}
+        </Text>
+        {!isPro && (
+          <TouchableOpacity
+            style={styles.upgradeCard}
+            onPress={() => setUpgradeVisible(true)}
+            testID="settings-upgrade-button"
+          >
+            <View style={styles.upgradeIcon}>
+              <Crown size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.upgradeCardText}>{proCopy.upgradeButton ?? "Upgrade to Pro"}</Text>
+            <ChevronRight size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        )}
+        <View style={styles.devToggleRow}>
+          <View style={styles.devToggleTextWrap}>
+            <Text style={styles.devToggleTitle}>{proCopy.devToggle ?? "Enable Pro (Dev Mode)"}</Text>
+            <Text style={styles.devToggleHint}>{proCopy.devToggleHint ?? "Temporarily simulate a Pro account for testing."}</Text>
+          </View>
+          <Switch
+            value={isPro}
+            onValueChange={() => togglePro()}
+            trackColor={{ false: Colors.light.border, true: Colors.light.primary }}
+            thumbColor="#FFFFFF"
+            testID="settings-pro-dev-toggle"
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t.settings.dataOverview}</Text>
         <View style={styles.statsGrid}>
           <View style={styles.statItem}>
@@ -398,6 +446,7 @@ export default function SettingsScreen() {
           <ChevronRight size={20} color={Colors.light.tabIconDefault} />
         </TouchableOpacity>
       </View>
+      <UpgradeModal visible={upgradeVisible} onClose={() => setUpgradeVisible(false)} />
     </ScrollView>
   );
 }
@@ -641,6 +690,87 @@ const styles = StyleSheet.create({
   },
   levelButtonDescription: {
     fontSize: 13,
+    color: Colors.light.tabIconDefault,
+  },
+  proHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  proStatusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  proStatusPillFree: {
+    backgroundColor: Colors.light.primary + "15",
+    borderColor: Colors.light.primary + "40",
+  },
+  proStatusPillPro: {
+    backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primary,
+  },
+  proStatusPillText: {
+    fontSize: 12,
+    fontWeight: "700" as const,
+  },
+  upgradeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: Colors.light.primary,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.light.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+      },
+      android: { elevation: 4 },
+    }),
+  },
+  upgradeIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  upgradeCardText: {
+    flex: 1,
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600" as const,
+  },
+  devToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.light.card,
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+  },
+  devToggleTextWrap: {
+    flex: 1,
+  },
+  devToggleTitle: {
+    fontSize: 15,
+    fontWeight: "600" as const,
+    color: Colors.light.text,
+    marginBottom: 2,
+  },
+  devToggleHint: {
+    fontSize: 12,
     color: Colors.light.tabIconDefault,
   },
   sectionDescription: {
