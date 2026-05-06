@@ -502,24 +502,25 @@ export default function HomeScreen() {
         </View>
         <View style={styles.insightsGrid}>
           {insights.map((insight) => (
-            <InteractiveCard
-              key={insight.id}
-              testID={`insight-${insight.id}`}
-              onPress={() => {
-                if (insight.route) {
-                  router.push(insight.route);
-                }
-              }}
-              style={styles.insightCard}
-              pressedStyle={styles.insightCardPressed}
-            >
-              <View style={styles.insightIcon}>{insight.icon}</View>
-              <View style={styles.insightTextBlock}>
-                <Text style={styles.insightTitle}>{insight.title}</Text>
-                <Text style={styles.insightValue}>{insight.value}</Text>
-                <Text style={styles.insightHint}>{insight.hint}</Text>
-              </View>
-            </InteractiveCard>
+            <View key={insight.id} style={styles.insightCellWrapper}>
+              <InteractiveCard
+                testID={`insight-${insight.id}`}
+                onPress={() => {
+                  if (insight.route) {
+                    router.push(insight.route);
+                  }
+                }}
+                style={styles.insightCard}
+                pressedStyle={styles.insightCardPressed}
+              >
+                <View style={styles.insightIcon}>{insight.icon}</View>
+                <View style={styles.insightTextBlock}>
+                  <Text style={styles.insightTitle} numberOfLines={1}>{insight.title}</Text>
+                  <Text style={styles.insightValue} numberOfLines={1}>{insight.value}</Text>
+                  <Text style={styles.insightHint} numberOfLines={3}>{insight.hint}</Text>
+                </View>
+              </InteractiveCard>
+            </View>
           ))}
         </View>
       </View>
@@ -704,9 +705,16 @@ const styles = StyleSheet.create({
   insightsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    columnGap: 12,
+    rowGap: 12,
+  },
+  insightCellWrapper: {
+    width: "48%",
+    height: 190,
   },
   insightCard: {
+    flex: 1,
+    width: "100%",
     flexDirection: "column",
     alignItems: "flex-start",
     backgroundColor: Colors.light.card,
@@ -715,10 +723,6 @@ const styles = StyleSheet.create({
     gap: 12,
     borderWidth: 1,
     borderColor: Colors.light.border,
-    flexBasis: "48%",
-    flexGrow: 1,
-    flexShrink: 1,
-    minHeight: 170,
   },
   insightCardPressed: {
     borderColor: Colors.light.secondary,
@@ -753,6 +757,7 @@ const styles = StyleSheet.create({
   },
   interactiveCardWrapper: {
     borderRadius: 20,
+    alignSelf: "stretch",
   },
   interactiveCard: {
     backgroundColor: Colors.light.card,
