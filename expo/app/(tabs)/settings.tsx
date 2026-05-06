@@ -12,6 +12,7 @@ import { useUserPreferences, type ExperienceLevel } from "@/store/user-preferenc
 import { useAuth } from "@/store/auth-store";
 import { usePro } from "@/store/pro-store";
 import UpgradeModal from "@/components/UpgradeModal";
+import DataExportSheet from "@/components/DataExportSheet";
 import { trackEvent } from "@/lib/analytics";
 import { useState } from "react";
 
@@ -24,6 +25,7 @@ export default function SettingsScreen() {
   const { signOut, user } = useAuth();
   const { isPro, togglePro } = usePro();
   const [upgradeVisible, setUpgradeVisible] = useState<boolean>(false);
+  const [exportVisible, setExportVisible] = useState<boolean>(false);
   const proCopy = (t as unknown as { pro?: Record<string, string> }).pro ?? {};
   const currentExperienceLevel: ExperienceLevel = experienceLevel ?? "beginner";
 
@@ -49,35 +51,12 @@ export default function SettingsScreen() {
   };
 
   const handleExport = () => {
-    const exportData = {
-      yards,
-      hives,
-      inspections,
-      tasks,
-      queens: [],
-      harvests: [],
-      devices: [],
-      sensorReadings: [],
-      exportedAt: new Date().toISOString(),
-      version: "1.0.0",
-    };
-
-    const jsonString = JSON.stringify(exportData, null, 2);
-    
-    Alert.alert(
-      t.settings.exportTitle,
-      `${t.settings.exportMessage} ${yards.length} ${t.settings.yards.toLowerCase()}, ${hives.length} ${t.settings.hives.toLowerCase()}, ${inspections.length} ${t.settings.inspections.toLowerCase()}, ${tasks.length} ${t.settings.tasks.toLowerCase()}.\n\nData size: ${(jsonString.length / 1024).toFixed(2)} KB`,
-      [
-        { text: t.common.cancel, style: "cancel" },
-        {
-          text: t.settings.exportCopy,
-          onPress: () => {
-            Alert.alert(t.common.success, t.settings.exportNote);
-            console.log("Export data:", jsonString);
-          },
-        },
-      ]
-    );
+    if (!isPro) {
+      console.log("[Settings] export blocked, opening upgrade modal");
+      setUpgradeVisible(true);
+      return;
+    }
+    setExportVisible(true);
   };
 
   const handleClearData = () => {
@@ -378,11 +357,18 @@ export default function SettingsScreen() {
           <Text style={styles.menuText}>{t.settings.loadDemoData}</Text>
           <ChevronRight size={20} color={Colors.light.tabIconDefault} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={handleExport}>
+        <TouchableOpacity style={styles.menuItem} onPress={handleExport} testID="settings-export-button">
           <View style={styles.menuIcon}>
-            <Download size={20} color={Colors.light.primary} />
+            {isPro ? (
+              <Download size={20} color={Colors.light.primary} />
+            ) : (
+              <Crown size={20} color={Colors.light.primary} />
+            )}
           </View>
-          <Text style={styles.menuText}>{t.settings.exportData}</Text>
+          <Text style={styles.menuText}>
+            {t.settings.exportData}
+            {!isPro ? `  ·  ${proCopy.badge ?? "Pro"}` : ""}
+          </Text>
           <ChevronRight size={20} color={Colors.light.tabIconDefault} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem} onPress={handleClearData}>
@@ -453,7 +439,16 @@ export default function SettingsScreen() {
           <ChevronRight size={20} color={Colors.light.tabIconDefault} />
         </TouchableOpacity>
       </View>
-      <UpgradeModal visible={upgradeVisible} onClose={() => setUpgradeVisible(false)} />
+      <UpgradeModal
+        visible={upgradeVisible}
+        onClose={() => setUpgradeVisible(false)}
+        reason={proCopy.reportExportLocked ?? "Exporting data is a Pro feature."}
+      />
+      <DataExportSheet
+        visible={exportVisible}
+        onClose={() => setExportVisible(false)}
+        onLockedTap={() => setUpgradeVisible(true)}
+      />
     </ScrollView>
   );
 }

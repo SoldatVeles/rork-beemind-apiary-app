@@ -7,6 +7,7 @@ import { useBeeMind } from "@/store/beemind-context";
 import { usePro } from "@/store/pro-store";
 import { useLanguage } from "@/store/language-store";
 import UpgradeModal from "@/components/UpgradeModal";
+import DataExportSheet from "@/components/DataExportSheet";
 
 type ReportType = "summary" | "inspections" | "harvests" | "tasks" | "queens";
 
@@ -17,6 +18,7 @@ export default function ReportsScreen() {
   const { t } = useLanguage();
   const proCopy = (t as unknown as { pro?: Record<string, string> }).pro ?? {};
   const [upgradeVisible, setUpgradeVisible] = useState<boolean>(false);
+  const [exportVisible, setExportVisible] = useState<boolean>(false);
 
   const generateSummaryReport = () => {
     const activeHives = hives.filter((h) => h.status === "Active").length;
@@ -162,34 +164,21 @@ export default function ReportsScreen() {
     }
   };
 
-  const handleExport = (type: ReportType) => {
+  const handleExport = (_type: ReportType) => {
     if (!isPro) {
       console.log("[Reports] export blocked, showing upgrade modal");
       setUpgradeVisible(true);
       return;
     }
-    const report = getReportData(type);
-    const exportData = {
-      report: report.title,
-      generatedAt: new Date().toISOString(),
-      data: report.data,
-    };
+    setExportVisible(true);
+  };
 
-    const jsonString = JSON.stringify(exportData, null, 2);
-    Alert.alert(
-      "Export Report",
-      `Report ready to export.\\n\\nSize: ${(jsonString.length / 1024).toFixed(2)} KB`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Copy Data",
-          onPress: () => {
-            console.log("Export data:", jsonString);
-            Alert.alert("Success", "Report data logged to console. In production, this would copy to clipboard.");
-          },
-        },
-      ]
-    );
+  const openExportSheet = () => {
+    if (!isPro) {
+      setUpgradeVisible(true);
+      return;
+    }
+    setExportVisible(true);
   };
 
   const reportTypes: Array<{ type: ReportType; title: string; icon: any; color: string }> = [
@@ -208,6 +197,21 @@ export default function ReportsScreen() {
         <Text style={styles.pageSubtitle}>
           Select a report type to view statistics and export data
         </Text>
+
+        <TouchableOpacity
+          style={styles.csvButton}
+          onPress={openExportSheet}
+          testID="reports-csv-export"
+        >
+          {isPro ? (
+            <Download size={18} color="#FFFFFF" />
+          ) : (
+            <Crown size={18} color="#FFFFFF" />
+          )}
+          <Text style={styles.csvButtonText}>
+            {isPro ? "Export raw data (CSV)" : `Export raw data (CSV) · ${proCopy.badge ?? "Pro"}`}
+          </Text>
+        </TouchableOpacity>
 
         <View style={styles.reportGrid}>
           {reportTypes.map((report) => {
@@ -265,6 +269,11 @@ export default function ReportsScreen() {
           onClose={() => setUpgradeVisible(false)}
           reason={proCopy.reportExportLocked ?? "Exporting reports is a Pro feature."}
         />
+        <DataExportSheet
+          visible={exportVisible}
+          onClose={() => setExportVisible(false)}
+          onLockedTap={() => setUpgradeVisible(true)}
+        />
       </ScrollView>
     </>
   );
@@ -287,7 +296,22 @@ const styles = StyleSheet.create({
   pageSubtitle: {
     fontSize: 16,
     color: Colors.light.tabIconDefault,
+    marginBottom: 16,
+  },
+  csvButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: Colors.light.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
     marginBottom: 24,
+  },
+  csvButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600" as const,
   },
   reportGrid: {
     flexDirection: "row",
