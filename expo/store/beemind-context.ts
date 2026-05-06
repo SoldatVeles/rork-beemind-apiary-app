@@ -3,6 +3,7 @@ import { useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/store/auth-store";
+import { trackEvent } from "@/lib/analytics";
 import type {
   Yard,
   Hive,
@@ -149,7 +150,10 @@ export const [BeeMindProvider, useBeeMind] = createContextHook(() => {
   const createYardMutation = useMutation({
     mutationFn: (yard: Omit<Yard, "id" | "created_at">) =>
       insertRow<Omit<Yard, "id" | "created_at">>(TABLES.yards, yard),
-    onSuccess: () => invalidate(["yards"]),
+    onSuccess: (data) => {
+      invalidate(["yards"]);
+      trackEvent("yard_created", { yard_id: (data as { id?: string })?.id ?? null });
+    },
   });
   const updateYardMutation = useMutation({
     mutationFn: ({ id, ...values }: { id: string } & Partial<Yard>) =>
@@ -165,7 +169,13 @@ export const [BeeMindProvider, useBeeMind] = createContextHook(() => {
   const createHiveMutation = useMutation({
     mutationFn: (hive: Omit<Hive, "id" | "created_at">) =>
       insertRow<Omit<Hive, "id" | "created_at">>(TABLES.hives, hive),
-    onSuccess: () => invalidate(["hives"]),
+    onSuccess: (data) => {
+      invalidate(["hives"]);
+      trackEvent("hive_created", {
+        hive_id: (data as { id?: string })?.id ?? null,
+        yard_id: (data as { yard_id?: string })?.yard_id ?? null,
+      });
+    },
   });
   const updateHiveMutation = useMutation({
     mutationFn: ({ id, ...values }: { id: string } & Partial<Hive>) =>
@@ -181,7 +191,15 @@ export const [BeeMindProvider, useBeeMind] = createContextHook(() => {
   const createTaskMutation = useMutation({
     mutationFn: (task: Omit<Task, "id" | "created_at">) =>
       insertRow<Omit<Task, "id" | "created_at">>(TABLES.tasks, task),
-    onSuccess: () => invalidate(["tasks"]),
+    onSuccess: (data) => {
+      invalidate(["tasks"]);
+      const t = data as { id?: string; scope?: string; priority?: number };
+      trackEvent("task_created", {
+        task_id: t?.id ?? null,
+        scope: t?.scope ?? null,
+        priority: t?.priority ?? null,
+      });
+    },
   });
   const updateTaskMutation = useMutation({
     mutationFn: ({ id, ...values }: { id: string } & Partial<Task>) =>
@@ -213,7 +231,14 @@ export const [BeeMindProvider, useBeeMind] = createContextHook(() => {
   const createInspectionMutation = useMutation({
     mutationFn: (inspection: Omit<Inspection, "id">) =>
       insertRow<Omit<Inspection, "id">>(TABLES.inspections, inspection),
-    onSuccess: () => invalidate(["inspections"]),
+    onSuccess: (data) => {
+      invalidate(["inspections"]);
+      const i = data as { id?: string; hive_id?: string };
+      trackEvent("inspection_created", {
+        inspection_id: i?.id ?? null,
+        hive_id: i?.hive_id ?? null,
+      });
+    },
   });
   const deleteInspectionMutation = useMutation({
     mutationFn: (id: string) => deleteRow(TABLES.inspections, id),
@@ -224,7 +249,15 @@ export const [BeeMindProvider, useBeeMind] = createContextHook(() => {
   const createHarvestMutation = useMutation({
     mutationFn: (harvest: Omit<HarvestBatch, "id" | "created_at">) =>
       insertRow<Omit<HarvestBatch, "id" | "created_at">>(TABLES.harvests, harvest),
-    onSuccess: () => invalidate(["harvests"]),
+    onSuccess: (data) => {
+      invalidate(["harvests"]);
+      const h = data as { id?: string; weight_kg?: number; frames_spun?: number };
+      trackEvent("harvest_created", {
+        harvest_id: h?.id ?? null,
+        weight_kg: h?.weight_kg ?? null,
+        frames_spun: h?.frames_spun ?? null,
+      });
+    },
   });
   const deleteHarvestMutation = useMutation({
     mutationFn: (id: string) => deleteRow(TABLES.harvests, id),
@@ -235,7 +268,14 @@ export const [BeeMindProvider, useBeeMind] = createContextHook(() => {
   const createInventoryItemMutation = useMutation({
     mutationFn: (item: Omit<InventoryItem, "id" | "created_at">) =>
       insertRow<Omit<InventoryItem, "id" | "created_at">>(TABLES.inventory, item),
-    onSuccess: () => invalidate(["inventory"]),
+    onSuccess: (data) => {
+      invalidate(["inventory"]);
+      const it = data as { id?: string; category?: string };
+      trackEvent("inventory_item_created", {
+        item_id: it?.id ?? null,
+        category: it?.category ?? null,
+      });
+    },
   });
   const updateInventoryItemMutation = useMutation({
     mutationFn: ({ id, ...values }: { id: string } & Partial<InventoryItem>) =>

@@ -11,6 +11,7 @@ import {
 import { Crown, Check, X, Sparkles } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { useLanguage } from "@/store/language-store";
+import { trackEvent } from "@/lib/analytics";
 
 interface UpgradeModalProps {
   visible: boolean;
@@ -38,6 +39,7 @@ export default function UpgradeModal({ visible, onClose, reason }: UpgradeModalP
 
   const handleUpgrade = () => {
     console.log("[UpgradeModal] upgrade pressed (placeholder)");
+    trackEvent("upgrade_clicked", { source: reason ? "reason_modal" : "settings" });
     onClose();
   };
 

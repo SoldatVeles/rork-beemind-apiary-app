@@ -12,6 +12,7 @@ import { useUserPreferences, type ExperienceLevel } from "@/store/user-preferenc
 import { useAuth } from "@/store/auth-store";
 import { usePro } from "@/store/pro-store";
 import UpgradeModal from "@/components/UpgradeModal";
+import { trackEvent } from "@/lib/analytics";
 import { useState } from "react";
 
 export default function SettingsScreen() {
@@ -314,7 +315,13 @@ export default function SettingsScreen() {
           </View>
           <Switch
             value={isPro}
-            onValueChange={() => togglePro()}
+            onValueChange={async () => {
+              const next = !isPro;
+              await togglePro();
+              if (next) {
+                trackEvent("pro_enabled_dev");
+              }
+            }}
             trackColor={{ false: Colors.light.border, true: Colors.light.primary }}
             thumbColor="#FFFFFF"
             testID="settings-pro-dev-toggle"

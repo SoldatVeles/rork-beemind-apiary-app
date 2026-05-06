@@ -4,6 +4,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import createContextHook from '@nkzw/create-context-hook';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
+import { trackEvent } from '@/lib/analytics';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -63,6 +64,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       }
 
       console.log('[Auth] Sign in successful');
+      trackEvent('user_logged_in', { provider: 'email' });
       return data;
     } catch (err) {
       console.error('[Auth] Sign in failed:', err);
@@ -95,6 +97,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       }
 
       console.log('[Auth] Sign up successful');
+      trackEvent('user_signed_up', { provider: 'email' });
       return data;
     } catch (err) {
       console.error('[Auth] Sign up failed:', err);
