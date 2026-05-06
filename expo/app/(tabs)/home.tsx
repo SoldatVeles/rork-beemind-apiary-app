@@ -703,10 +703,13 @@ const styles = StyleSheet.create({
     color: Colors.light.tabIconDefault,
   },
   insightsGrid: {
+    flexDirection: "column",
     gap: 12,
+    width: "100%",
   },
   insightCellWrapper: {
     width: "100%",
+    alignSelf: "stretch",
   },
   insightCard: {
     width: "100%",
