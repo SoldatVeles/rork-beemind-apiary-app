@@ -6,15 +6,9 @@ import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import { useBeeMind } from "@/store/beemind-context";
 import { useLanguage } from "@/store/language-store";
-import type { Language } from "@/constants/translations";
+import { LANGUAGE_FLAGS, LANGUAGE_NATIVE_LABELS, SUPPORTED_LANGUAGES, type Language } from "@/constants/translations";
 import { useUserPreferences, type ExperienceLevel } from "@/store/user-preferences-store";
 import { useAuth } from "@/store/auth-store";
-
-const languageMeta: Record<Language, { flag: string }> = {
-  en: { flag: "🇬🇧" },
-  es: { flag: "🇪🇸" },
-  pt: { flag: "🇵🇹" },
-};
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -113,16 +107,7 @@ export default function SettingsScreen() {
     setLanguage(lang);
   };
 
-  const getLanguageName = (lang: Language) => {
-    switch (lang) {
-      case "en":
-        return t.settings.english;
-      case "es":
-        return t.settings.spanish;
-      case "pt":
-        return t.settings.portuguese;
-    }
-  };
+  const getLanguageName = (lang: Language) => LANGUAGE_NATIVE_LABELS[lang];
 
   const applyExperienceLevelChange = (level: ExperienceLevel) => {
     try {
@@ -253,9 +238,10 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t.settings.language}</Text>
         <View style={styles.languageContainer}>
-          {(["en", "es", "pt"] as const).map((lang) => (
+          {SUPPORTED_LANGUAGES.map((lang) => (
             <TouchableOpacity
               key={lang}
+              testID={`language-${lang}`}
               style={[
                 styles.languageButton,
                 language === lang && styles.languageButtonActive,
@@ -268,7 +254,7 @@ export default function SettingsScreen() {
                   language === lang && styles.flagBadgeActive,
                 ]}
               >
-                <Text style={styles.flagEmoji}>{languageMeta[lang].flag}</Text>
+                <Text style={styles.flagEmoji}>{LANGUAGE_FLAGS[lang]}</Text>
               </View>
               <Text
                 style={[
