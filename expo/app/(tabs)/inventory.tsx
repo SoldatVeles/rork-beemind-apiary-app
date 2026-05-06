@@ -4,10 +4,12 @@ import { PackageOpen, Plus, X, AlertTriangle } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { useBeeMind } from "@/store/beemind-context";
 import { useLanguage } from "@/store/language-store";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateViews";
 import type { InventoryItemCategory } from "@/types";
 
 export default function InventoryScreen() {
-  const { inventory, addInventoryItem, updateInventoryItem, deleteInventoryItem } = useBeeMind();
+  const { inventory, addInventoryItem, updateInventoryItem, deleteInventoryItem, queryStates } = useBeeMind();
+  const inventoryState = queryStates.inventory;
   const { t } = useLanguage();
   const [filter, setFilter] = useState<"all" | "lowStock" | "inStock">("all");
   const [modalVisible, setModalVisible] = useState<boolean>(false);
@@ -72,13 +74,27 @@ export default function InventoryScreen() {
       Alert.alert(t.common.error, t.inventory.quantityRequired);
       return;
     }
+    const quantityValue = parseFloat(formData.quantity);
+    if (Number.isNaN(quantityValue) || quantityValue < 0) {
+      Alert.alert("Invalid quantity", "Quantity cannot be negative. Use 0 if you are out of stock.");
+      return;
+    }
+    const minQuantityValue = formData.min_quantity ? parseFloat(formData.min_quantity) : undefined;
+    if (minQuantityValue !== undefined && (Number.isNaN(minQuantityValue) || minQuantityValue < 0)) {
+      Alert.alert("Invalid minimum", "Minimum quantity cannot be negative.");
+      return;
+    }
+    if (!formData.unit.trim()) {
+      Alert.alert("Unit required", "Add a unit (e.g. kg, pcs, L) so quantities make sense.");
+      return;
+    }
 
     const itemData = {
-      name: formData.name,
+      name: formData.name.trim(),
       category: formData.category,
-      quantity: parseFloat(formData.quantity),
-      unit: formData.unit,
-      min_quantity: formData.min_quantity ? parseFloat(formData.min_quantity) : undefined,
+      quantity: quantityValue,
+      unit: formData.unit.trim(),
+      min_quantity: minQuantityValue,
       notes: formData.notes || undefined,
     };
 
@@ -142,12 +158,23 @@ export default function InventoryScreen() {
       </ScrollView>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {sortedItems.length === 0 ? (
-          <View style={styles.emptyState}>
-            <PackageOpen size={64} color={Colors.light.tabIconDefault} />
-            <Text style={styles.emptyTitle}>{t.inventory.noItems}</Text>
-            <Text style={styles.emptyText}>{t.inventory.addFirst}</Text>
-          </View>
+        {inventoryState.isLoading && inventory.length === 0 ? (
+          <LoadingState message="Loading inventory" testID="inventory-loading" />
+        ) : inventoryState.isError && inventory.length === 0 ? (
+          <ErrorState
+            message={inventoryState.error?.message ?? "We could not load your inventory."}
+            onRetry={() => inventoryState.refetch()}
+            testID="inventory-error"
+          />
+        ) : sortedItems.length === 0 ? (
+          <EmptyState
+            testID="inventory-empty-state"
+            icon={<PackageOpen size={36} color={Colors.light.primary} />}
+            title={t.inventory.noItems}
+            message={filter !== "all" ? "No items match this filter. Try clearing the filter." : "Track gear, feed, treatments and packaging so you never run out in the middle of a job."}
+            actionLabel={filter === "all" ? "Add an item" : undefined}
+            onAction={filter === "all" ? () => openModal() : undefined}
+          />
         ) : (
           sortedItems.map((item) => {
             const isLowStock = item.min_quantity ? item.quantity < item.min_quantity : false;
@@ -193,6 +220,12 @@ export default function InventoryScreen() {
                     <Text style={styles.minQuantity}>
                       {t.inventory.minQuantity}: {item.min_quantity} {item.unit}
                     </Text>
+                  )}
+                  {isLowStock && (
+                    <View style={styles.restockPill}>
+                      <AlertTriangle size={12} color={Colors.light.error} />
+                      <Text style={styles.restockPillText}>Needs restock</Text>
+                    </View>
                   )}
                   {item.notes && (
                     <Text style={styles.itemNotes}>{item.notes}</Text>
@@ -462,6 +495,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.text,
     marginTop: 4,
+  },
+  restockPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: Colors.light.error + "15",
+    marginTop: 6,
+  },
+  restockPillText: {
+    fontSize: 12,
+    fontWeight: "700" as const,
+    color: Colors.light.error,
   },
   emptyState: {
     alignItems: "center",

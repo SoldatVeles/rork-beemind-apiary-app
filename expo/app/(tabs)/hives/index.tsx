@@ -17,6 +17,8 @@ import Colors from "../../../constants/colors";
 import type { Hive, HiveStatus } from "../../../types";
 import MapLocationPicker from "@/components/hives/MapLocationPicker";
 import { useBeeMind } from "@/store/beemind-context";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateViews";
+import HiveStatusChips from "@/components/HiveStatusChips";
 
 interface HiveFormState {
   yard_id: string;
@@ -38,7 +40,8 @@ interface HiveLocation {
 export default function HivesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { hives, yards, addHive } = useBeeMind();
+  const { hives, yards, addHive, queens, inspections, tasks, queryStates } = useBeeMind();
+  const hivesState = queryStates.hives;
   const [search, setSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<HiveStatus | "All">("All");
   const [modalVisible, setModalVisible] = useState<boolean>(false);
@@ -130,12 +133,12 @@ export default function HivesScreen() {
     console.log("[HivesScreen] submit new hive", formData);
 
     if (!formData.label.trim()) {
-      Alert.alert("Error", "Hive label is required");
+      Alert.alert("Hive label required", "Give this hive a short label so you can find it again (e.g. 'Hive 1').");
       return;
     }
 
     if (!formData.yard_id) {
-      Alert.alert("Error", "Please select a yard");
+      Alert.alert("Apiary required", "Pick which apiary (yard) this hive belongs to.");
       return;
     }
 
@@ -237,14 +240,32 @@ export default function HivesScreen() {
       </ScrollView>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {filteredHives.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Hexagon size={64} color={Colors.light.tabIconDefault} />
-            <Text style={styles.emptyTitle}>No Hives Found</Text>
-            <Text style={styles.emptyText}>
-              {search ? "Try a different search" : "Add your first hive to get started"}
-            </Text>
-          </View>
+        {hivesState.isLoading && hives.length === 0 ? (
+          <LoadingState message="Loading hives" testID="hives-loading" />
+        ) : hivesState.isError && hives.length === 0 ? (
+          <ErrorState
+            message={hivesState.error?.message ?? "We could not load your hives."}
+            onRetry={() => hivesState.refetch()}
+            testID="hives-error"
+          />
+        ) : filteredHives.length === 0 ? (
+          search || statusFilter !== "All" ? (
+            <EmptyState
+              testID="hives-no-match"
+              icon={<Hexagon size={36} color={Colors.light.primary} />}
+              title="No matching hives"
+              message="Try clearing the search or status filter to see all hives."
+            />
+          ) : (
+            <EmptyState
+              testID="hives-empty-state"
+              icon={<Hexagon size={36} color={Colors.light.primary} />}
+              title="No hives yet"
+              message={yards.length === 0 ? "Add an apiary first, then add your first hive to start tracking inspections, queens and harvests." : "A hive holds a colony of bees. Add your first hive to start tracking inspections, queens and harvests."}
+              actionLabel={yards.length === 0 ? "Add an apiary first" : "Add your first hive"}
+              onAction={() => yards.length === 0 ? router.push("/(tabs)/yards/new") : setModalVisible(true)}
+            />
+          )
         ) : (
           filteredHives.map((hive) => {
             const location = getHiveLocation(hive);
@@ -284,6 +305,9 @@ export default function HivesScreen() {
                 <View style={styles.hiveDetails}>
                   <Text style={styles.hiveDetail}>Type: {hive.hive_type}</Text>
                   <Text style={styles.hiveDetail}>Frames: {hive.frames}</Text>
+                </View>
+                <View style={styles.hiveChipsRow}>
+                  <HiveStatusChips hive={hive} inspections={inspections} queens={queens} tasks={tasks} />
                 </View>
               </TouchableOpacity>
             );
@@ -655,6 +679,9 @@ const styles = StyleSheet.create({
   hiveDetails: {
     flexDirection: "row",
     gap: 16,
+  },
+  hiveChipsRow: {
+    marginTop: 10,
   },
   hiveDetail: {
     fontSize: 14,

@@ -16,11 +16,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "../../../constants/colors";
 import { useBeeMind } from "../../../store/beemind-context";
 import { useLanguage } from "../../../store/language-store";
+import { EmptyState, ErrorState, LoadingState } from "../../../components/StateViews";
 
 export default function YardsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { yards, hives } = useBeeMind();
+  const { yards, hives, queryStates } = useBeeMind();
+  const yardsState = queryStates.yards;
   const { t } = useLanguage();
   const [mapModalVisible, setMapModalVisible] = useState<boolean>(false);
 
@@ -162,7 +164,15 @@ export default function YardsScreen() {
           </TouchableOpacity>
         )}
 
-        {hasYards ? (
+        {yardsState.isLoading && !hasYards ? (
+          <LoadingState message="Loading apiaries" testID="yards-loading" />
+        ) : yardsState.isError && !hasYards ? (
+          <ErrorState
+            message={yardsState.error?.message ?? "We could not load your apiaries."}
+            onRetry={() => yardsState.refetch()}
+            testID="yards-error"
+          />
+        ) : hasYards ? (
           <View style={styles.yardList} testID="yards-list">
             {yards.map((yard) => (
               <TouchableOpacity
@@ -192,11 +202,14 @@ export default function YardsScreen() {
             ))}
           </View>
         ) : (
-          <View style={styles.emptyState} testID="yards-empty-state">
-            <MapPin size={64} color={Colors.light.tabIconDefault} />
-            <Text style={styles.emptyTitle}>{t.yards.noYards}</Text>
-            <Text style={styles.emptyText}>{t.yards.addFirst}</Text>
-          </View>
+          <EmptyState
+            testID="yards-empty-state"
+            icon={<MapPin size={36} color={Colors.light.primary} />}
+            title={t.yards.noYards}
+            message="An apiary (yard) is a location where you keep your hives. Add your first one to start tracking."
+            actionLabel="Add your first apiary"
+            onAction={handleAddYard}
+          />
         )}
       </ScrollView>
 

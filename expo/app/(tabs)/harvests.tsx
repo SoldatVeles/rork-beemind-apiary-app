@@ -3,9 +3,11 @@ import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Modal, 
 import { Package, Plus, X } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { useBeeMind } from "@/store/beemind-context";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateViews";
 
 export default function HarvestsScreen() {
-  const { harvests, yards, hives, addHarvest } = useBeeMind();
+  const { harvests, yards, hives, addHarvest, queryStates } = useBeeMind();
+  const harvestsState = queryStates.harvests;
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [formData, setFormData] = useState({
     yard_id: "",
@@ -33,17 +35,33 @@ export default function HarvestsScreen() {
   };
 
   const handleSubmit = () => {
-    if (!formData.frames_spun || !formData.weight_kg) {
-      Alert.alert("Error", "Frames spun and weight are required");
+    const frames = parseInt(formData.frames_spun, 10);
+    const weight = parseFloat(formData.weight_kg);
+    const moisture = formData.moisture_pct ? parseFloat(formData.moisture_pct) : undefined;
+
+    if (!formData.frames_spun.trim() || !formData.weight_kg.trim()) {
+      Alert.alert("Missing fields", "Please enter both frames spun and weight (kg).");
+      return;
+    }
+    if (Number.isNaN(frames) || frames <= 0) {
+      Alert.alert("Invalid frames", "Frames spun must be a positive number.");
+      return;
+    }
+    if (Number.isNaN(weight) || weight <= 0) {
+      Alert.alert("Invalid weight", "Harvest weight must be greater than zero.");
+      return;
+    }
+    if (moisture !== undefined && (Number.isNaN(moisture) || moisture < 0 || moisture > 100)) {
+      Alert.alert("Invalid moisture", "Moisture must be between 0 and 100%.");
       return;
     }
 
     addHarvest({
       yard_id: formData.yard_id || undefined,
       hive_id: formData.hive_id || undefined,
-      frames_spun: parseInt(formData.frames_spun),
-      weight_kg: parseFloat(formData.weight_kg),
-      moisture_pct: formData.moisture_pct ? parseFloat(formData.moisture_pct) : undefined,
+      frames_spun: frames,
+      weight_kg: weight,
+      moisture_pct: moisture,
       lot_code: formData.lot_code || undefined,
       notes: formData.notes || undefined,
     });
@@ -92,12 +110,23 @@ export default function HarvestsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {sortedHarvests.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Package size={64} color={Colors.light.tabIconDefault} />
-            <Text style={styles.emptyTitle}>No Harvests Yet</Text>
-            <Text style={styles.emptyText}>Record your first honey harvest</Text>
-          </View>
+        {harvestsState.isLoading && harvests.length === 0 ? (
+          <LoadingState message="Loading harvests" testID="harvests-loading" />
+        ) : harvestsState.isError && harvests.length === 0 ? (
+          <ErrorState
+            message={harvestsState.error?.message ?? "We could not load your harvests."}
+            onRetry={() => harvestsState.refetch()}
+            testID="harvests-error"
+          />
+        ) : sortedHarvests.length === 0 ? (
+          <EmptyState
+            testID="harvests-empty-state"
+            icon={<Package size={36} color={Colors.light.primary} />}
+            title="No harvests yet"
+            message="Track each honey extraction with frames spun, weight and moisture so you can compare seasons."
+            actionLabel={hives.length > 0 ? "Record your first harvest" : undefined}
+            onAction={hives.length > 0 ? () => setModalVisible(true) : undefined}
+          />
         ) : (
           sortedHarvests.map((harvest) => (
             <View key={harvest.id} style={styles.harvestCard}>

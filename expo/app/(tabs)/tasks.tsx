@@ -4,10 +4,12 @@ import { CheckSquare, Plus, Square, RotateCcw, MapPin, Trash2, Edit3, Filter, So
 import Colors from "@/constants/colors";
 import { useBeeMind } from "@/store/beemind-context";
 import { useLanguage } from "@/store/language-store";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateViews";
 import type { TaskPriority, TaskScope } from "@/types";
 
 export default function TasksScreen() {
-  const { tasks, updateTask, addTask, deleteTask, hives, yards } = useBeeMind();
+  const { tasks, updateTask, addTask, deleteTask, hives, yards, queryStates } = useBeeMind();
+  const tasksState = queryStates.tasks;
   const { t } = useLanguage();
   const [filter, setFilter] = useState<"all" | "pending" | "completed">("pending");
   const [scopeFilter, setScopeFilter] = useState<"all" | TaskScope>("all");
@@ -277,14 +279,23 @@ export default function TasksScreen() {
       )}
 
       <ScrollView contentContainerStyle={styles.content}>
-        {sortedTasks.length === 0 ? (
-          <View style={styles.emptyState}>
-            <CheckSquare size={64} color={Colors.light.tabIconDefault} />
-            <Text style={styles.emptyTitle}>{t.tasks.noTasks}</Text>
-            <Text style={styles.emptyText}>
-              {filter === "completed" ? t.tasks.noCompleted : t.tasks.addFirst}
-            </Text>
-          </View>
+        {tasksState.isLoading && tasks.length === 0 ? (
+          <LoadingState message="Loading tasks" testID="tasks-loading" />
+        ) : tasksState.isError && tasks.length === 0 ? (
+          <ErrorState
+            message={tasksState.error?.message ?? "We could not load your tasks."}
+            onRetry={() => tasksState.refetch()}
+            testID="tasks-error"
+          />
+        ) : sortedTasks.length === 0 ? (
+          <EmptyState
+            testID="tasks-empty-state"
+            icon={<CheckSquare size={36} color={Colors.light.primary} />}
+            title={t.tasks.noTasks}
+            message={filter === "completed" ? t.tasks.noCompleted : "Tasks help you remember what to do next — feeding, treating, supering or splitting. Add your first task."}
+            actionLabel={filter === "completed" ? undefined : "Add a task"}
+            onAction={filter === "completed" ? undefined : () => setModalVisible(true)}
+          />
         ) : (
           sortedTasks.map((task) => {
             const location = getTaskLocation(task);

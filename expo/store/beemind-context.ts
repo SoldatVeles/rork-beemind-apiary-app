@@ -289,6 +289,19 @@ export const [BeeMindProvider, useBeeMind] = createContextHook(() => {
     harvestsQuery.isLoading ||
     inventoryQuery.isLoading;
 
+  const queryStates = useMemo(
+    () => ({
+      yards: { isLoading: yardsQuery.isLoading, isError: yardsQuery.isError, error: yardsQuery.error as Error | null, refetch: yardsQuery.refetch },
+      hives: { isLoading: hivesQuery.isLoading, isError: hivesQuery.isError, error: hivesQuery.error as Error | null, refetch: hivesQuery.refetch },
+      tasks: { isLoading: tasksQuery.isLoading, isError: tasksQuery.isError, error: tasksQuery.error as Error | null, refetch: tasksQuery.refetch },
+      queens: { isLoading: queensQuery.isLoading, isError: queensQuery.isError, error: queensQuery.error as Error | null, refetch: queensQuery.refetch },
+      inspections: { isLoading: inspectionsQuery.isLoading, isError: inspectionsQuery.isError, error: inspectionsQuery.error as Error | null, refetch: inspectionsQuery.refetch },
+      harvests: { isLoading: harvestsQuery.isLoading, isError: harvestsQuery.isError, error: harvestsQuery.error as Error | null, refetch: harvestsQuery.refetch },
+      inventory: { isLoading: inventoryQuery.isLoading, isError: inventoryQuery.isError, error: inventoryQuery.error as Error | null, refetch: inventoryQuery.refetch },
+    }),
+    [yardsQuery, hivesQuery, tasksQuery, queensQuery, inspectionsQuery, harvestsQuery, inventoryQuery]
+  );
+
   const addYard = useCallback(
     (yard: Omit<Yard, "id" | "created_at">) => createYardMutation.mutateAsync(yard),
     [createYardMutation]
@@ -431,6 +444,7 @@ export const [BeeMindProvider, useBeeMind] = createContextHook(() => {
       sensorReadings,
       treatments,
       isLoading,
+      queryStates,
       addYard,
       updateYard,
       deleteYard,
@@ -468,6 +482,7 @@ export const [BeeMindProvider, useBeeMind] = createContextHook(() => {
       sensorReadings,
       treatments,
       isLoading,
+      queryStates,
       addYard,
       updateYard,
       deleteYard,

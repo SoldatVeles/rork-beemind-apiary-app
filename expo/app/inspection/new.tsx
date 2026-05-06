@@ -80,7 +80,7 @@ export default function NewInspectionScreen() {
 
   const handleSubmit = async () => {
     if (!hive) {
-      Alert.alert("Error", "No hive selected");
+      Alert.alert("Hive required", "Open this inspection from a hive so we know which colony to log.");
       return;
     }
     if (submitting) return;

@@ -86,7 +86,11 @@ export default function AddYardScreen() {
     }
 
     if (!formState.name.trim()) {
-      Alert.alert(t.common.error, t.yards.nameRequired);
+      Alert.alert("Apiary name required", "Give this apiary (yard) a short, recognisable name like 'Home Garden' or 'Orchard'.");
+      return;
+    }
+    if (formState.name.trim().length > 80) {
+      Alert.alert("Name too long", "Keep apiary names under 80 characters.");
       return;
     }
 
