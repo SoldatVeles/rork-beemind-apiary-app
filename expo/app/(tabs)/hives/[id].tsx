@@ -695,6 +695,18 @@ export default function HiveDetailScreen() {
       Alert.alert("Error", "Please provide valid numeric values");
       return;
     }
+    if (frames <= 0) {
+      Alert.alert("Invalid frames", "Frames spun must be a positive number.");
+      return;
+    }
+    if (weight <= 0) {
+      Alert.alert("Invalid weight", "Harvest weight must be greater than zero.");
+      return;
+    }
+    if (moisture !== undefined && (Number.isNaN(moisture) || moisture < 0 || moisture > 100)) {
+      Alert.alert("Invalid moisture", "Moisture must be between 0 and 100%.");
+      return;
+    }
     addHarvest({
       hive_id: id,
       yard_id: hive?.yard_id,
