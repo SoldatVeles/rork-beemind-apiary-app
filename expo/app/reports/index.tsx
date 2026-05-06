@@ -3,12 +3,12 @@ import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Alert }
 import { Stack } from "expo-router";
 import { FileText, Download, Calendar, TrendingUp, BarChart3 } from "lucide-react-native";
 import Colors from "@/constants/colors";
-import { useBeeMindStore } from "@/store/beemind-store";
+import { useBeeMind } from "@/store/beemind-context";
 
 type ReportType = "summary" | "inspections" | "harvests" | "tasks" | "queens";
 
 export default function ReportsScreen() {
-  const { yards, hives, queens, inspections, tasks, harvests, devices, sensorReadings } = useBeeMindStore();
+  const { yards, hives, queens, inspections, tasks, harvests, devices, sensorReadings } = useBeeMind();
   const [selectedReport, setSelectedReport] = useState<ReportType | null>(null);
 
   const generateSummaryReport = () => {

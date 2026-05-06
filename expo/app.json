@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "BeeMind Apiary App",
-    "slug": "beemine-apiary-app",
+    "slug": "beemind-apiary-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -15,14 +15,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.rork.beemine-apiary-app"
+      "bundleIdentifier": "app.rork.beemind-apiary-app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "app.rork.beemine-apiary-app"
+      "package": "app.rork.beemind-apiary-app"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"

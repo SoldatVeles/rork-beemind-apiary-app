@@ -3,12 +3,12 @@ import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Modal, 
 import { Stack, useRouter } from "expo-router";
 import { Activity, Plus, X, Trash2 } from "lucide-react-native";
 import Colors from "@/constants/colors";
-import { useBeeMindStore } from "@/store/beemind-store";
+import { useBeeMind } from "@/store/beemind-context";
 import type { DeviceType } from "@/types";
 
 export default function DevicesScreen() {
   const router = useRouter();
-  const { devices, hives, addDevice, deleteDevice, sensorReadings } = useBeeMindStore();
+  const { devices, hives, addDevice, deleteDevice, sensorReadings } = useBeeMind();
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [formData, setFormData] = useState({
     device_type: "temp" as DeviceType,

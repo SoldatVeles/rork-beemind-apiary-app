@@ -3,14 +3,14 @@ import { ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Modal, 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Hexagon, Plus, MapPin, Edit, Trash2, Navigation } from "lucide-react-native";
 import Colors from "@/constants/colors";
-import { useBeeMindStore } from "@/store/beemind-store";
+import { useBeeMind } from "@/store/beemind-context";
 
 
 
 export default function YardDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { yards, hives, updateYard, deleteYard, addHive } = useBeeMindStore();
+  const { yards, hives, updateYard, deleteYard, addHive } = useBeeMind();
   const [editModalVisible, setEditModalVisible] = useState<boolean>(false);
   const [hiveModalVisible, setHiveModalVisible] = useState<boolean>(false);
   const [editFormData, setEditFormData] = useState({

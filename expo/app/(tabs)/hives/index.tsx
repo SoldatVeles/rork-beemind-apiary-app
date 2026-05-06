@@ -14,7 +14,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Hexagon, Map as MapIcon, Plus, Search, X, Navigation } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "../../../constants/colors";
-import { useBeeMindStore } from "../../../store/beemind-store";
 import type { Hive, HiveStatus } from "../../../types";
 import MapLocationPicker from "@/components/hives/MapLocationPicker";
 import { useBeeMind } from "@/store/beemind-context";
@@ -39,9 +38,7 @@ interface HiveLocation {
 export default function HivesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { hives, yards: localYards, addHive } = useBeeMindStore();
-  const { yards: remoteYards } = useBeeMind();
-  const yards = useMemo(() => (remoteYards.length > 0 ? remoteYards : localYards), [remoteYards, localYards]);
+  const { hives, yards, addHive } = useBeeMind();
   const [search, setSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<HiveStatus | "All">("All");
   const [modalVisible, setModalVisible] = useState<boolean>(false);

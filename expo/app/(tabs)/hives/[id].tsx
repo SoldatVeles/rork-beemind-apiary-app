@@ -28,7 +28,6 @@ import {
   Navigation,
 } from "lucide-react-native";
 import Colors from "../../../constants/colors";
-import { useBeeMindStore } from "../../../store/beemind-store";
 import type { HiveStatus } from "../../../types";
 import MapViewComponent from "@/components/hives/MapView";
 import MapLocationPicker from "@/components/hives/MapLocationPicker";
@@ -73,10 +72,9 @@ const parseCoordinate = (value: string) => {
 export default function HiveDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { yards: remoteYards } = useBeeMind();
   const {
+    yards,
     hives,
-    yards: localYards,
     queens,
     inspections,
     tasks,
@@ -87,8 +85,7 @@ export default function HiveDetailScreen() {
     updateQueen,
     addTreatment,
     deleteTreatment,
-  } = useBeeMindStore();
-  const yards = useMemo(() => (remoteYards.length > 0 ? remoteYards : localYards), [remoteYards, localYards]);
+  } = useBeeMind();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [queenModalVisible, setQueenModalVisible] = useState<boolean>(false);

@@ -5,7 +5,6 @@ import { Database, Download, Trash2, Info, ChevronRight, Activity, FileText, Spr
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import { useBeeMind } from "@/store/beemind-context";
-import { useBeeMindStore } from "@/store/beemind-store";
 import { useLanguage } from "@/store/language-store";
 import type { Language } from "@/constants/translations";
 import { useUserPreferences, type ExperienceLevel } from "@/store/user-preferences-store";
@@ -20,7 +19,7 @@ const languageMeta: Record<Language, { flag: string }> = {
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { yards, hives, inspections, tasks } = useBeeMind();
+  const { yards, hives, inspections, tasks, queens, harvests, devices, deleteYard, deleteHive, deleteQueen, deleteInspection, deleteTask, deleteHarvest, deleteDevice } = useBeeMind();
   const { language, setLanguage, t } = useLanguage();
   const { experienceLevel, setExperienceLevel } = useUserPreferences();
   const { signOut, user } = useAuth();
@@ -88,18 +87,22 @@ export default function SettingsScreen() {
         {
           text: t.settings.clearButton,
           style: "destructive",
-          onPress: () => {
-            const store = useBeeMindStore.getState();
-            
-            store.yards.forEach((y) => store.deleteYard(y.id));
-            store.hives.forEach((h) => store.deleteHive(h.id));
-            store.queens.forEach((q) => store.deleteQueen(q.id));
-            store.inspections.forEach((i) => store.deleteInspection(i.id));
-            store.tasks.forEach((task) => store.deleteTask(task.id));
-            store.harvests.forEach((h) => store.deleteHarvest(h.id));
-            store.devices.forEach((d) => store.deleteDevice(d.id));
-            
-            Alert.alert(t.common.success, t.settings.clearSuccess);
+          onPress: async () => {
+            try {
+              await Promise.all([
+                ...tasks.map((task) => deleteTask(task.id)),
+                ...inspections.map((i) => deleteInspection(i.id)),
+                ...queens.map((q) => deleteQueen(q.id)),
+                ...harvests.map((h) => deleteHarvest(h.id)),
+                ...devices.map((d) => deleteDevice(d.id)),
+                ...hives.map((h) => deleteHive(h.id)),
+                ...yards.map((y) => deleteYard(y.id)),
+              ]);
+              Alert.alert(t.common.success, t.settings.clearSuccess);
+            } catch (error) {
+              console.error("[Settings] clear data failed", error);
+              Alert.alert(t.common.error, "Failed to clear data");
+            }
           },
         },
       ]

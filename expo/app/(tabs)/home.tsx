@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useMemo, useRef } from "react";
 import {
   Animated,
   Pressable,
@@ -22,7 +22,7 @@ import {
 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "../../constants/colors";
-import { useBeeMindStore } from "../../store/beemind-store";
+import { useBeeMind } from "../../store/beemind-context";
 import { useUserPreferences } from "../../store/user-preferences-store";
 import { useLanguage } from "../../store/language-store";
 import type { TranslationKeys } from "../../constants/translations";
@@ -139,15 +139,8 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const homeStrings = t.home;
-  const { tasks, inspections, hives, harvests, loadSeedData } = useBeeMindStore();
+  const { tasks, inspections, hives, harvests } = useBeeMind();
   const { hasCompletedOnboarding } = useUserPreferences();
-
-  useEffect(() => {
-    if (hives.length === 0) {
-      console.log("[HomeScreen] Seeding sample data for pristine state");
-      loadSeedData();
-    }
-  }, [hives.length, loadSeedData]);
 
   console.log(
     "[HomeScreen] tasks",

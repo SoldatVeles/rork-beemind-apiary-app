@@ -1,4 +1,3 @@
-// template
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -9,9 +8,7 @@ import { LanguageProvider, useLanguage } from "@/store/language-store";
 import { AuthProvider } from "@/store/auth-store";
 import { BeeMindProvider } from "@/store/beemind-context";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
-import { trpc, trpcClient } from "@/lib/trpc";
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient({
@@ -20,7 +17,7 @@ const queryClient = new QueryClient({
       retry: 1,
       retryDelay: 1000,
       staleTime: 5000,
-      networkMode: 'offlineFirst',
+      networkMode: "offlineFirst",
     },
   },
 });
@@ -50,9 +47,9 @@ function AppContent() {
     async function setupApp() {
       try {
         if (__DEV__) {
-          console.log('[App] Running in development mode');
+          console.log("[App] Running in development mode");
         }
-        
+
         if (!__DEV__ && Updates.isEnabled) {
           try {
             const update = await Updates.checkForUpdateAsync();
@@ -61,14 +58,14 @@ function AppContent() {
               await Updates.reloadAsync();
             }
           } catch (updateError) {
-            console.log('[App] Update check failed:', updateError);
+            console.log("[App] Update check failed:", updateError);
           }
         }
       } catch (error) {
-        console.error('[App] Setup error:', error);
+        console.error("[App] Setup error:", error);
       }
     }
-    
+
     setupApp();
   }, []);
 
@@ -95,17 +92,15 @@ function AppContent() {
 
 export default function RootLayout() {
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <LanguageProvider>
-            <BeeMindProvider>
-              <AppContent />
-            </BeeMindProvider>
-          </LanguageProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </trpc.Provider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <LanguageProvider>
+          <BeeMindProvider>
+            <AppContent />
+          </BeeMindProvider>
+        </LanguageProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

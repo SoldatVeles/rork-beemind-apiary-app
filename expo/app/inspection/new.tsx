@@ -3,13 +3,13 @@ import { ScrollView, StyleSheet, Text, View, TouchableOpacity, TextInput, Alert,
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Check } from "lucide-react-native";
 import Colors from "@/constants/colors";
-import { useBeeMindStore } from "@/store/beemind-store";
+import { useBeeMind } from "@/store/beemind-context";
 import type { BroodPattern } from "@/types";
 
 export default function NewInspectionScreen() {
   const { hive } = useLocalSearchParams<{ hive: string }>();
   const router = useRouter();
-  const { hives, addInspection } = useBeeMindStore();
+  const { hives, addInspection } = useBeeMind();
   const [formData, setFormData] = useState({
     brood_pattern: "" as BroodPattern | "",
     eggs_seen: false,

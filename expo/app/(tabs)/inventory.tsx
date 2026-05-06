@@ -7,7 +7,7 @@ import { useLanguage } from "@/store/language-store";
 import type { InventoryItemCategory } from "@/types";
 
 export default function InventoryScreen() {
-  const { inventory, addInventoryItem, updateInventoryItem } = useBeeMind();
+  const { inventory, addInventoryItem, updateInventoryItem, deleteInventoryItem } = useBeeMind();
   const { t } = useLanguage();
   const [filter, setFilter] = useState<"all" | "lowStock" | "inStock">("all");
   const [modalVisible, setModalVisible] = useState<boolean>(false);
