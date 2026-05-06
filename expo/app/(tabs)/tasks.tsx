@@ -64,13 +64,20 @@ export default function TasksScreen() {
     return 0;
   });
 
-  const toggleTask = (taskId: string, isDone: boolean) => {
-    if (!isDone) {
-      updateTask(taskId, { is_done: true, completed_at: new Date().toISOString() });
-      setRecentlyCompleted(taskId);
-    } else {
-      updateTask(taskId, { is_done: false, completed_at: undefined });
-      Alert.alert(t.common.success, t.tasks.reactivated);
+  const toggleTask = async (taskId: string, isDone: boolean) => {
+    try {
+      if (!isDone) {
+        await updateTask(taskId, { is_done: true, completed_at: new Date().toISOString() });
+        setRecentlyCompleted(taskId);
+      } else {
+        await updateTask(taskId, { is_done: false, completed_at: null as unknown as undefined });
+        setRecentlyCompleted(null);
+        Alert.alert(t.common.success, t.tasks.reactivated);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("[Tasks] toggle failed", msg);
+      Alert.alert(t.common.error, msg);
     }
   };
 
@@ -285,18 +292,24 @@ export default function TasksScreen() {
 
             return (
               <View key={task.id} style={styles.taskWrapper}>
-                <TouchableOpacity
-                  style={[styles.taskCard, task.is_done && styles.taskCardCompleted]}
-                  onPress={() => toggleTask(task.id, task.is_done)}
-                >
-                  <View style={styles.taskCheckbox}>
+                <View style={[styles.taskCard, task.is_done && styles.taskCardCompleted]}>
+                  <TouchableOpacity
+                    style={styles.taskCheckbox}
+                    onPress={() => toggleTask(task.id, task.is_done)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    testID={`task-checkbox-${task.id}`}
+                  >
                     {task.is_done ? (
                       <CheckSquare size={24} color={Colors.light.success} />
                     ) : (
                       <Square size={24} color={Colors.light.tabIconDefault} />
                     )}
-                  </View>
-                  <View style={styles.taskContent}>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.taskContent}
+                    onPress={() => handleEdit(task)}
+                    activeOpacity={0.7}
+                  >
                     <Text style={[styles.taskTitle, task.is_done && styles.taskTitleCompleted]}>
                       {task.title}
                     </Text>
@@ -322,7 +335,7 @@ export default function TasksScreen() {
                         {task.notes}
                       </Text>
                     )}
-                  </View>
+                  </TouchableOpacity>
                   <View style={styles.taskRight}>
                     <View
                       style={[
@@ -333,10 +346,7 @@ export default function TasksScreen() {
                     {task.is_done ? (
                       <TouchableOpacity
                         style={styles.reactivateButton}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          toggleTask(task.id, task.is_done);
-                        }}
+                        onPress={() => toggleTask(task.id, task.is_done)}
                       >
                         <RotateCcw size={18} color={Colors.light.primary} />
                       </TouchableOpacity>
@@ -344,26 +354,20 @@ export default function TasksScreen() {
                       <View style={styles.taskActions}>
                         <TouchableOpacity
                           style={styles.taskActionButton}
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            handleEdit(task);
-                          }}
+                          onPress={() => handleEdit(task)}
                         >
                           <Edit3 size={16} color={Colors.light.primary} />
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.taskActionButton}
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            handleDelete(task.id, task.title);
-                          }}
+                          onPress={() => handleDelete(task.id, task.title)}
                         >
                           <Trash2 size={16} color={Colors.light.error} />
                         </TouchableOpacity>
                       </View>
                     )}
                   </View>
-                </TouchableOpacity>
+                </View>
 
                 {isRecentlyCompleted && (
                   <TouchableOpacity
