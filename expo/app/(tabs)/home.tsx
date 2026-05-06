@@ -715,8 +715,10 @@ const styles = StyleSheet.create({
     gap: 12,
     borderWidth: 1,
     borderColor: Colors.light.border,
-    flex: 1,
-    minWidth: "48%",
+    flexBasis: "48%",
+    flexGrow: 1,
+    flexShrink: 1,
+    minHeight: 170,
   },
   insightCardPressed: {
     borderColor: Colors.light.secondary,
@@ -731,6 +733,7 @@ const styles = StyleSheet.create({
   },
   insightTextBlock: {
     gap: 4,
+    flex: 1,
   },
   insightTitle: {
     fontSize: 14,
