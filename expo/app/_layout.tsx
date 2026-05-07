@@ -1,8 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as Updates from "expo-updates";
 import React, { useEffect } from "react";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { asyncStoragePersister, clearPersistedQueryCache, PERSIST_BUSTER, queryClient } from "@/lib/query-client";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { LanguageProvider, useLanguage } from "@/store/language-store";
 import { AuthProvider } from "@/store/auth-store";
@@ -15,16 +16,7 @@ import SetupScreen from "@/components/SetupScreen";
 
 SplashScreen.preventAutoHideAsync();
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      retryDelay: 1000,
-      staleTime: 5000,
-      networkMode: "offlineFirst",
-    },
-  },
-});
+const TWENTY_FOUR_HOURS = 1000 * 60 * 60 * 24;
 
 function RootLayoutNav() {
   return (
@@ -112,7 +104,24 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: asyncStoragePersister,
+        maxAge: TWENTY_FOUR_HOURS,
+        buster: PERSIST_BUSTER,
+        dehydrateOptions: {
+          shouldDehydrateQuery: (query) =>
+            query.state.status === "success" &&
+            query.queryKey[0] !== "auth" &&
+            query.queryKey[0] !== "session",
+        },
+      }}
+      onError={(err) => {
+        console.log("[QueryCache] hydration failed, clearing", err);
+        clearPersistedQueryCache().catch(() => {});
+      }}
+    >
       <AuthProvider>
         <LanguageProvider>
           <SyncProvider>
@@ -124,7 +133,7 @@ export default function RootLayout() {
           </SyncProvider>
         </LanguageProvider>
       </AuthProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
 

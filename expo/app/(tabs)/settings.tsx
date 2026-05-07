@@ -1,7 +1,7 @@
 import { Image, ScrollView, StyleSheet, Text, View, TouchableOpacity, Platform, Alert } from "react-native";
 import { useEffect } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Database, Download, Trash2, Info, ChevronRight, Activity, FileText, Sprout, TrendingUp, Award, LogOut, Crown } from "lucide-react-native";
+import { Database, Download, Trash2, Info, ChevronRight, Activity, FileText, Sprout, TrendingUp, Award, LogOut, Crown, RefreshCw } from "lucide-react-native";
 import { Switch } from "react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
@@ -14,6 +14,7 @@ import { usePro } from "@/store/pro-store";
 import UpgradeModal from "@/components/UpgradeModal";
 import DataExportSheet from "@/components/DataExportSheet";
 import { trackEvent } from "@/lib/analytics";
+import { clearPersistedQueryCache } from "@/lib/query-client";
 import { useState } from "react";
 
 export default function SettingsScreen() {
@@ -83,6 +84,29 @@ export default function SettingsScreen() {
             } catch (error) {
               console.error("[Settings] clear data failed", error);
               Alert.alert(t.common.error, "Failed to clear data");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleClearCache = () => {
+    Alert.alert(
+      "Clear cached data?",
+      "This removes the offline query cache. Your data on the server is not affected.",
+      [
+        { text: t.common.cancel, style: "cancel" },
+        {
+          text: "Clear cache",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await clearPersistedQueryCache();
+              Alert.alert(t.common.success, "Cache cleared.");
+            } catch (error) {
+              console.log("[Settings] clear cache failed", error);
+              Alert.alert(t.common.error, "Failed to clear cache");
             }
           },
         },
@@ -369,6 +393,13 @@ export default function SettingsScreen() {
             {t.settings.exportData}
             {!isPro ? `  ·  ${proCopy.badge ?? "Pro"}` : ""}
           </Text>
+          <ChevronRight size={20} color={Colors.light.tabIconDefault} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem} onPress={handleClearCache} testID="clear-cache">
+          <View style={styles.menuIcon}>
+            <RefreshCw size={20} color={Colors.light.primary} />
+          </View>
+          <Text style={styles.menuText}>Clear cache</Text>
           <ChevronRight size={20} color={Colors.light.tabIconDefault} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem} onPress={handleClearData}>
