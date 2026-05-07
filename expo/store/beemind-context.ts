@@ -4,6 +4,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/store/auth-store";
 import { trackEvent } from "@/lib/analytics";
+import { writeCache, readCache } from "@/lib/cache";
+import { enqueue, type QueueableTable } from "@/lib/offline-queue";
+import { useSync } from "@/store/sync-store";
 import type {
   Yard,
   Hive,
@@ -30,70 +33,87 @@ const TABLES = {
   treatments: "treatments",
 } as const;
 
-async function fetchTable<T>(table: string): Promise<T[]> {
-  const { data, error } = await supabase.from(table).select("*");
-  if (error) {
-    console.warn(`[BeeMind] Failed to fetch ${table}:`, error.message);
+async function fetchTable<T>(table: string, cacheKey: string): Promise<T[]> {
+  try {
+    const { data, error } = await supabase.from(table).select("*");
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as T[];
+    writeCache<T[]>(cacheKey, rows).catch(() => {});
+    return rows;
+  } catch (err) {
+    console.warn(`[BeeMind] Failed to fetch ${table}:`, (err as Error).message);
+    const cached = await readCache<T[]>(cacheKey);
+    if (cached) {
+      console.log(`[BeeMind] Serving ${table} from offline cache (${cached.length})`);
+      return cached;
+    }
     return [];
   }
-  return (data ?? []) as T[];
 }
+
+const QUEUEABLE_TABLES: ReadonlySet<string> = new Set<string>([
+  "inspections",
+  "tasks",
+  "harvests",
+  "inventory_items",
+]);
 
 export const [BeeMindProvider, useBeeMind] = createContextHook(() => {
   const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
+  const { notifyEnqueued } = useSync();
   const userId = user?.id;
 
   const enabled = isAuthenticated;
 
   const yardsQuery = useQuery<Yard[]>({
     queryKey: ["yards", userId],
-    queryFn: () => fetchTable<Yard>(TABLES.yards),
+    queryFn: () => fetchTable<Yard>(TABLES.yards, `yards:${userId ?? "anon"}`),
     enabled,
   });
   const hivesQuery = useQuery<Hive[]>({
     queryKey: ["hives", userId],
-    queryFn: () => fetchTable<Hive>(TABLES.hives),
+    queryFn: () => fetchTable<Hive>(TABLES.hives, `hives:${userId ?? "anon"}`),
     enabled,
   });
   const tasksQuery = useQuery<Task[]>({
     queryKey: ["tasks", userId],
-    queryFn: () => fetchTable<Task>(TABLES.tasks),
+    queryFn: () => fetchTable<Task>(TABLES.tasks, `tasks:${userId ?? "anon"}`),
     enabled,
   });
   const queensQuery = useQuery<Queen[]>({
     queryKey: ["queens", userId],
-    queryFn: () => fetchTable<Queen>(TABLES.queens),
+    queryFn: () => fetchTable<Queen>(TABLES.queens, `queens:${userId ?? "anon"}`),
     enabled,
   });
   const inspectionsQuery = useQuery<Inspection[]>({
     queryKey: ["inspections", userId],
-    queryFn: () => fetchTable<Inspection>(TABLES.inspections),
+    queryFn: () => fetchTable<Inspection>(TABLES.inspections, `inspections:${userId ?? "anon"}`),
     enabled,
   });
   const harvestsQuery = useQuery<HarvestBatch[]>({
     queryKey: ["harvests", userId],
-    queryFn: () => fetchTable<HarvestBatch>(TABLES.harvests),
+    queryFn: () => fetchTable<HarvestBatch>(TABLES.harvests, `harvests:${userId ?? "anon"}`),
     enabled,
   });
   const inventoryQuery = useQuery<InventoryItem[]>({
     queryKey: ["inventory", userId],
-    queryFn: () => fetchTable<InventoryItem>(TABLES.inventory),
+    queryFn: () => fetchTable<InventoryItem>(TABLES.inventory, `inventory:${userId ?? "anon"}`),
     enabled,
   });
   const devicesQuery = useQuery<Device[]>({
     queryKey: ["devices", userId],
-    queryFn: () => fetchTable<Device>(TABLES.devices),
+    queryFn: () => fetchTable<Device>(TABLES.devices, `devices:${userId ?? "anon"}`),
     enabled,
   });
   const sensorReadingsQuery = useQuery<SensorReading[]>({
     queryKey: ["sensorReadings", userId],
-    queryFn: () => fetchTable<SensorReading>(TABLES.sensorReadings),
+    queryFn: () => fetchTable<SensorReading>(TABLES.sensorReadings, `sensorReadings:${userId ?? "anon"}`),
     enabled,
   });
   const treatmentsQuery = useQuery<Treatment[]>({
     queryKey: ["treatments", userId],
-    queryFn: () => fetchTable<Treatment>(TABLES.treatments),
+    queryFn: () => fetchTable<Treatment>(TABLES.treatments, `treatments:${userId ?? "anon"}`),
     enabled,
   });
 
@@ -110,18 +130,29 @@ export const [BeeMindProvider, useBeeMind] = createContextHook(() => {
       values: T
     ): Promise<T & { id: string }> => {
       const payload = userId ? { ...values, user_id: userId } : values;
-      const { data, error } = await supabase
-        .from(table)
-        .insert(payload)
-        .select()
-        .single();
-      if (error) {
-        console.error(`[BeeMind] insert ${table} failed:`, error.message);
-        throw error;
+      try {
+        const { data, error } = await supabase
+          .from(table)
+          .insert(payload)
+          .select()
+          .single();
+        if (error) throw new Error(error.message);
+        return data as T & { id: string };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        const isQueueable = QUEUEABLE_TABLES.has(table);
+        if (isQueueable) {
+          console.log(`[BeeMind] insert ${table} failed (${message}); queued offline.`);
+          await enqueue(table as QueueableTable, payload as Record<string, unknown>);
+          notifyEnqueued().catch(() => {});
+          const localId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          return { ...(payload as Record<string, unknown>), id: localId } as T & { id: string };
+        }
+        console.error(`[BeeMind] insert ${table} failed:`, message);
+        throw err;
       }
-      return data as T & { id: string };
     },
-    [userId]
+    [userId, notifyEnqueued]
   );
 
   const updateRow = useCallback(

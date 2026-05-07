@@ -25,6 +25,7 @@ import {
 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "../../constants/colors";
+import ConnectionIndicator from "../../components/ConnectionIndicator";
 import { useBeeMind } from "../../store/beemind-context";
 import { useUserPreferences } from "../../store/user-preferences-store";
 import { useLanguage } from "../../store/language-store";
@@ -381,6 +382,9 @@ export default function HomeScreen() {
         style={[styles.hero, { paddingTop: 40 + insets.top }]}
         testID="dashboard-hero"
       >
+        <View style={{ marginBottom: 12 }}>
+          <ConnectionIndicator compact />
+        </View>
         <View style={styles.heroHeader}>
           <View style={styles.heroTitleBlock}>
             <Text style={styles.heroEyebrow}>{homeStrings.hero.eyebrow}</Text>

@@ -8,6 +8,7 @@ import { LanguageProvider, useLanguage } from "@/store/language-store";
 import { AuthProvider } from "@/store/auth-store";
 import { BeeMindProvider } from "@/store/beemind-context";
 import { ProProvider } from "@/store/pro-store";
+import { SyncProvider } from "@/store/sync-store";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { getSupabaseConfig } from "@/lib/env";
 import SetupScreen from "@/components/SetupScreen";
@@ -114,11 +115,13 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <LanguageProvider>
-          <BeeMindProvider>
-            <ProProvider>
-              <AppContent />
-            </ProProvider>
-          </BeeMindProvider>
+          <SyncProvider>
+            <BeeMindProvider>
+              <ProProvider>
+                <AppContent />
+              </ProProvider>
+            </BeeMindProvider>
+          </SyncProvider>
         </LanguageProvider>
       </AuthProvider>
     </QueryClientProvider>
