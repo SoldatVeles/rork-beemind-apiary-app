@@ -55,6 +55,7 @@ const rawTranslations = {
       harvests: "Harvests",
       inventory: "Inventory",
       settings: "Settings",
+      insights: "Insights",
     },
     home: {
       title: "BeeMind",
@@ -502,6 +503,7 @@ const rawTranslations = {
       harvests: "Cosechas",
       inventory: "Inventario",
       settings: "Ajustes",
+      insights: "Insights",
     },
     home: {
       title: "BeeMind",
@@ -949,6 +951,7 @@ const rawTranslations = {
       harvests: "Colheitas",
       inventory: "Inventário",
       settings: "Configurações",
+      insights: "Insights",
     },
     home: {
       title: "BeeMind",
@@ -1396,6 +1399,7 @@ const rawTranslations = {
       harvests: "Ernten",
       inventory: "Inventar",
       settings: "Einstellungen",
+      insights: "Einblicke",
     },
     home: {
       title: "BeeMind",

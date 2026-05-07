@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, MapPin, Hexagon, CheckSquare, Settings, Package, PackageOpen } from "lucide-react-native";
+import { Home, MapPin, Hexagon, CheckSquare, Settings, Package, PackageOpen, BarChart3 } from "lucide-react-native";
 import React from "react";
 
 import Colors from "../../constants/colors";
@@ -74,6 +74,14 @@ export default function TabLayout() {
           title: t.tabs.inventory,
           tabBarIcon: ({ color }) => <PackageOpen size={24} color={color} />,
           href: isAdvanced ? "/(tabs)/inventory" : null,
+        }}
+      />
+      <Tabs.Screen
+        name="insights"
+        options={{
+          title: t.tabs.insights,
+          tabBarIcon: ({ color }) => <BarChart3 size={24} color={color} />,
+          href: isBeginnerOrHigher ? "/(tabs)/insights" : null,
         }}
       />
       <Tabs.Screen
