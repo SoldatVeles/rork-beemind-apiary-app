@@ -24,7 +24,7 @@ export default function SettingsScreen() {
   const { language, setLanguage, t } = useLanguage();
   const { experienceLevel, setExperienceLevel } = useUserPreferences();
   const { signOut, user } = useAuth();
-  const { isPro, togglePro } = usePro();
+  const { isPro, togglePro, isDevOverride, refreshEntitlement } = usePro();
   const [upgradeVisible, setUpgradeVisible] = useState<boolean>(false);
   const [exportVisible, setExportVisible] = useState<boolean>(false);
   const proCopy = (t as unknown as { pro?: Record<string, string> }).pro ?? {};
@@ -89,6 +89,29 @@ export default function SettingsScreen() {
         },
       ]
     );
+  };
+
+  const handleRestorePurchases = async () => {
+    try {
+      const Purchases = (await import("react-native-purchases")).default;
+      const { configurePurchases } = await import("@/lib/revenuecat");
+      if (!configurePurchases()) {
+        Alert.alert(t.common.error, "Purchases not available right now.");
+        return;
+      }
+      const info = await Purchases.restorePurchases();
+      await refreshEntitlement();
+      const hasPro = info.entitlements.active.pro !== undefined;
+      Alert.alert(
+        hasPro ? (t.common.success) : (proCopy.restoreEmptyTitle ?? "No purchases found"),
+        hasPro
+          ? (proCopy.restoreSuccessMessage ?? "Your Pro access has been restored.")
+          : (proCopy.restoreEmptyMessage ?? "We couldn't find any active subscriptions on this account."),
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      Alert.alert(t.common.error, message);
+    }
   };
 
   const handleClearCache = () => {
@@ -311,15 +334,26 @@ export default function SettingsScreen() {
             <ChevronRight size={20} color="#FFFFFF" />
           </TouchableOpacity>
         )}
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={handleRestorePurchases}
+          testID="settings-restore-purchases"
+        >
+          <View style={styles.menuIcon}>
+            <RefreshCw size={20} color={Colors.light.primary} />
+          </View>
+          <Text style={styles.menuText}>{proCopy.restore ?? "Restore Purchases"}</Text>
+          <ChevronRight size={20} color={Colors.light.tabIconDefault} />
+        </TouchableOpacity>
         <View style={styles.devToggleRow}>
           <View style={styles.devToggleTextWrap}>
             <Text style={styles.devToggleTitle}>{proCopy.devToggle ?? "Enable Pro (Dev Mode)"}</Text>
             <Text style={styles.devToggleHint}>{proCopy.devToggleHint ?? "Temporarily simulate a Pro account for testing."}</Text>
           </View>
           <Switch
-            value={isPro}
+            value={isDevOverride}
             onValueChange={async () => {
-              const next = !isPro;
+              const next = !isDevOverride;
               await togglePro();
               if (next) {
                 trackEvent("pro_enabled_dev");

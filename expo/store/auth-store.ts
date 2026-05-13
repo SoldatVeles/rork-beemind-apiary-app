@@ -5,6 +5,7 @@ import createContextHook from '@nkzw/create-context-hook';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 import { trackEvent } from '@/lib/analytics';
+import { loginUser as rcLogin, logoutUser as rcLogout } from '@/lib/revenuecat';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -38,6 +39,12 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       console.log('[Auth] Auth state changed:', _event, currentSession ? 'Authenticated' : 'Not authenticated');
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
+      const uid = currentSession?.user?.id;
+      if (uid) {
+        void rcLogin(uid);
+      } else {
+        void rcLogout();
+      }
     });
 
     return () => {

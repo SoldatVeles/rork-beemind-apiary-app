@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Modal,
   Platform,
   ScrollView,
@@ -8,10 +10,21 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Crown, Check, X, Sparkles } from "lucide-react-native";
+import { Crown, Check, X, Sparkles, RefreshCw } from "lucide-react-native";
+import Purchases, {
+  type PurchasesPackage,
+  PURCHASES_ERROR_CODE,
+} from "react-native-purchases";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
 import { useLanguage } from "@/store/language-store";
 import { trackEvent } from "@/lib/analytics";
+import {
+  configurePurchases,
+  fetchCurrentOffering,
+  isConfigured,
+} from "@/lib/revenuecat";
+import { usePro } from "@/store/pro-store";
 
 interface UpgradeModalProps {
   visible: boolean;
@@ -22,7 +35,91 @@ interface UpgradeModalProps {
 
 export default function UpgradeModal({ visible, onClose, reason }: UpgradeModalProps) {
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
+  const { refreshEntitlement } = usePro();
   const pro = (t as unknown as { pro?: Record<string, string> }).pro ?? {};
+
+  const offeringQuery = useQuery({
+    queryKey: ["rc", "offering"],
+    queryFn: fetchCurrentOffering,
+    enabled: visible,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const monthlyPackage: PurchasesPackage | null = useMemo(() => {
+    const offering = offeringQuery.data;
+    if (!offering) return null;
+    return offering.monthly ?? offering.availablePackages[0] ?? null;
+  }, [offeringQuery.data]);
+
+  const purchaseMutation = useMutation({
+    mutationFn: async (pkg: PurchasesPackage) => {
+      if (!configurePurchases()) {
+        throw new Error("RevenueCat is not configured");
+      }
+      const result = await Purchases.purchasePackage(pkg);
+      return result;
+    },
+    onSuccess: async () => {
+      await refreshEntitlement();
+      await queryClient.invalidateQueries({ queryKey: ["rc"] });
+      onClose();
+      Alert.alert(
+        pro.purchaseSuccessTitle ?? "Welcome to Pro",
+        pro.purchaseSuccessMessage ?? "Thanks for supporting BeeMind. Everything is unlocked.",
+      );
+    },
+    onError: (err: unknown) => {
+      const code = (err as { userCancelled?: boolean; code?: string })?.code;
+      const cancelled = (err as { userCancelled?: boolean })?.userCancelled === true
+        || code === PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR;
+      if (cancelled) {
+        if (__DEV__) console.log("[UpgradeModal] purchase cancelled");
+        return;
+      }
+      if (code === PURCHASES_ERROR_CODE.PAYMENT_PENDING_ERROR) {
+        Alert.alert(
+          pro.purchasePendingTitle ?? "Payment pending",
+          pro.purchasePendingMessage ?? "Your purchase is pending approval. You'll get Pro access once it completes.",
+        );
+        return;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      Alert.alert(
+        pro.purchaseFailedTitle ?? "Purchase failed",
+        message || (pro.purchaseFailedMessage ?? "Something went wrong. Please try again."),
+      );
+    },
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: async () => {
+      if (!configurePurchases()) {
+        throw new Error("RevenueCat is not configured");
+      }
+      return Purchases.restorePurchases();
+    },
+    onSuccess: async (info) => {
+      await refreshEntitlement();
+      const hasPro = info.entitlements.active.pro !== undefined;
+      if (hasPro) {
+        onClose();
+        Alert.alert(
+          pro.restoreSuccessTitle ?? "Pro restored",
+          pro.restoreSuccessMessage ?? "Your Pro access has been restored.",
+        );
+      } else {
+        Alert.alert(
+          pro.restoreEmptyTitle ?? "No purchases found",
+          pro.restoreEmptyMessage ?? "We couldn't find any active subscriptions on this account.",
+        );
+      }
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      Alert.alert(pro.restoreFailedTitle ?? "Restore failed", message);
+    },
+  });
 
   const title = pro.upgradeTitle ?? "Unlock BeeMind Pro";
   const subtitle = pro.upgradeSubtitle ?? "Grow your apiary without limits.";
@@ -33,15 +130,33 @@ export default function UpgradeModal({ visible, onClose, reason }: UpgradeModalP
     pro.benefitExport ?? "Export reports (CSV / PDF)",
     pro.benefitFuture ?? "Early access to future premium features",
   ];
-  const upgradeLabel = pro.upgradeCta ?? "Upgrade";
   const laterLabel = pro.maybeLater ?? "Maybe later";
-  const comingSoon = pro.comingSoon ?? "Payments coming soon";
+  const restoreLabel = pro.restore ?? "Restore Purchases";
 
-  const handleUpgrade = () => {
-    console.log("[UpgradeModal] upgrade pressed (placeholder)");
+  const priceLabel = monthlyPackage?.product?.priceString ?? "$4.99";
+  const periodLabel = pro.perMonth ?? "/ month";
+  const upgradeLabel = monthlyPackage
+    ? `${pro.subscribeFor ?? "Subscribe for"} ${priceLabel}`
+    : (pro.upgradeCta ?? "Upgrade");
+
+  const handleUpgrade = useCallback(() => {
+    if (!monthlyPackage) {
+      Alert.alert(
+        pro.unavailableTitle ?? "Unavailable",
+        pro.unavailableMessage ?? "Subscriptions are not available right now. Please try again later.",
+      );
+      return;
+    }
     trackEvent("upgrade_clicked", { source: reason ? "reason_modal" : "settings" });
-    onClose();
-  };
+    purchaseMutation.mutate(monthlyPackage);
+  }, [monthlyPackage, purchaseMutation, reason, pro]);
+
+  const handleRestore = useCallback(() => {
+    restoreMutation.mutate();
+  }, [restoreMutation]);
+
+  const isBusy = purchaseMutation.isPending || restoreMutation.isPending;
+  const loadingOffering = offeringQuery.isLoading || (visible && !isConfigured() && offeringQuery.isFetching);
 
   return (
     <Modal
@@ -57,6 +172,7 @@ export default function UpgradeModal({ visible, onClose, reason }: UpgradeModalP
             onPress={onClose}
             testID="upgrade-close"
             accessibilityLabel="Close"
+            disabled={isBusy}
           >
             <X size={22} color={Colors.light.text} />
           </TouchableOpacity>
@@ -86,7 +202,19 @@ export default function UpgradeModal({ visible, onClose, reason }: UpgradeModalP
               ))}
             </View>
 
-            <Text style={styles.comingSoon}>{comingSoon}</Text>
+            <View style={styles.priceCard}>
+              {loadingOffering ? (
+                <ActivityIndicator color={Colors.light.primary} />
+              ) : (
+                <>
+                  <Text style={styles.priceValue}>{priceLabel}</Text>
+                  <Text style={styles.pricePeriod}>{periodLabel}</Text>
+                </>
+              )}
+            </View>
+            <Text style={styles.disclaimer}>
+              {pro.disclaimer ?? "Auto-renews monthly. Cancel anytime in your store account."}
+            </Text>
           </ScrollView>
 
           <View style={styles.actions}>
@@ -94,18 +222,40 @@ export default function UpgradeModal({ visible, onClose, reason }: UpgradeModalP
               style={[styles.button, styles.buttonSecondary]}
               onPress={onClose}
               testID="upgrade-later"
+              disabled={isBusy}
             >
               <Text style={styles.buttonSecondaryText}>{laterLabel}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.button, styles.buttonPrimary]}
+              style={[styles.button, styles.buttonPrimary, (!monthlyPackage || isBusy) && styles.buttonDisabled]}
               onPress={handleUpgrade}
+              disabled={!monthlyPackage || isBusy}
               testID="upgrade-cta"
             >
-              <Crown size={18} color="#FFFFFF" />
-              <Text style={styles.buttonPrimaryText}>{upgradeLabel}</Text>
+              {purchaseMutation.isPending ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <>
+                  <Crown size={18} color="#FFFFFF" />
+                  <Text style={styles.buttonPrimaryText}>{upgradeLabel}</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={styles.restoreRow}
+            onPress={handleRestore}
+            disabled={isBusy}
+            testID="upgrade-restore"
+          >
+            {restoreMutation.isPending ? (
+              <ActivityIndicator color={Colors.light.primary} size="small" />
+            ) : (
+              <RefreshCw size={14} color={Colors.light.primary} />
+            )}
+            <Text style={styles.restoreText}>{restoreLabel}</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -122,7 +272,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: "90%",
+    maxHeight: "92%",
     paddingBottom: Platform.select({ ios: 24, default: 16 }),
   },
   closeButton: {
@@ -215,12 +365,38 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     fontWeight: "500" as const,
   },
-  comingSoon: {
+  priceCard: {
     marginTop: 24,
-    fontSize: 12,
+    alignSelf: "stretch",
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: Colors.light.background,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    minHeight: 56,
+  },
+  priceValue: {
+    fontSize: 28,
+    fontWeight: "800" as const,
+    color: Colors.light.text,
+  },
+  pricePeriod: {
+    fontSize: 14,
     color: Colors.light.tabIconDefault,
-    textTransform: "uppercase" as const,
-    letterSpacing: 1,
+    fontWeight: "500" as const,
+  },
+  disclaimer: {
+    marginTop: 12,
+    fontSize: 11,
+    color: Colors.light.tabIconDefault,
+    textAlign: "center",
+    lineHeight: 16,
+    paddingHorizontal: 8,
   },
   actions: {
     flexDirection: "row",
@@ -242,6 +418,9 @@ const styles = StyleSheet.create({
   buttonPrimary: {
     backgroundColor: Colors.light.primary,
   },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
   buttonSecondary: {
     backgroundColor: Colors.light.background,
     borderWidth: 1,
@@ -255,6 +434,19 @@ const styles = StyleSheet.create({
   buttonSecondaryText: {
     color: Colors.light.text,
     fontSize: 16,
+    fontWeight: "600" as const,
+  },
+  restoreRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 8,
+  },
+  restoreText: {
+    fontSize: 14,
+    color: Colors.light.primary,
     fontWeight: "600" as const,
   },
 });
